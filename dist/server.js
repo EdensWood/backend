@@ -16,7 +16,7 @@ const app = (0, express_1.default)();
 // Enhanced CORS configuration
 app.use((0, cors_1.default)({
     origin: [
-        "https://task-manager-frontend-eight-lilac.vercel.app/",
+        "https://task-manager-frontend-l2cre69w0-leafywoods-projects.vercel.app",
         "http://localhost:3000"
     ],
     credentials: true,
