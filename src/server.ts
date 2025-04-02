@@ -15,7 +15,7 @@ const app = express();
 app.use(
   cors({
     origin: [
-      "https://task-manager-frontend-l2cre69w0-leafywoods-projects.vercel.app",
+      "http://task-manager-frontend-eight-lilac.vercel.app",
       "http://localhost:3000"
     ],
     credentials: true,
