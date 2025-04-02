@@ -4,7 +4,7 @@ import { expressMiddleware } from "@apollo/server/express4";
 import session from "express-session";
 import cors from "cors";
 import dotenv from "dotenv";
-import schema from "../src/graphql/schema";
+import schema from "./graphql/schema";
 import sequelize from "../src/config/database";
 
 dotenv.config();
