@@ -43,16 +43,20 @@ app.use((0, express_session_1.default)({
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    proxy: process.env.NODE_ENV === 'production', // Required for Render
+    proxy: true, // Always enable proxy trust for Render
     cookie: {
-        secure: process.env.NODE_ENV === "production",
+        secure: true, // Must ALWAYS be true in production (Render uses HTTPS)
         httpOnly: true,
-        sameSite: process.env.NODE_ENV === "production" ? 'none' : 'lax',
+        sameSite: 'none', // Required for cross-origin (Vercel ↔ Render)
         maxAge: 24 * 60 * 60 * 1000,
-        domain: process.env.NODE_ENV === "production"
-            ? '.onrender.com'
-            : undefined
-    }
+        // Remove domain completely - let browsers handle it automatically
+    },
+    store: process.env.NODE_ENV === 'production'
+        ? new (require('connect-pg-simple')(express_session_1.default))({
+            conString: process.env.DATABASE_URL,
+            createTableIfMissing: true
+        })
+        : undefined // Use memory store in development
 }));
 // 4. Body parser middleware
 app.use(express_1.default.json({ limit: '10mb' }));
