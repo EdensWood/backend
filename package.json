@@ -2,10 +2,9 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "test": "jest",
-    "start": "node dist/server.js",  
-  "build": "tsc",                 
-  "watch": "ts-node-dev src/server.ts" 
-    
+    "start": "node dist/server.js",
+    "build": "tsc npm rebuild bcrypt --update-binary && tsc",
+    "watch": "ts-node-dev src/server.ts"
   },
   "dependencies": {
     "@apollo/server": "^4.11.3",
@@ -14,7 +13,6 @@
     "@types/express-session": "^1.18.1",
     "@types/node": "^22.13.14",
     "apollo-server-express": "^3.13.0",
-    "bcrypt": "^5.1.1",
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",

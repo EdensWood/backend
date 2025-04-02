@@ -1,4 +1,4 @@
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import jwt from 'jsonwebtoken';
 import { User, Task } from "../models";
 import { Request, Response } from "express";
