@@ -16,6 +16,7 @@ const app = (0, express_1.default)();
 // 1. Enhanced CORS Configurations
 const allowedOrigins = [
     "https://task-manager-frontend-eight-lilac.vercel.app",
+    "https://task-manager-frontend-anfiixaka-leafywoods-projects.vercel.app/sign-in",
     "http://localhost:3000"
 ];
 app.use((0, cors_1.default)({
