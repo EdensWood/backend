@@ -11,6 +11,7 @@ const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const schema_1 = __importDefault(require("./graphql/schema"));
 const database_1 = __importDefault(require("./config/database"));
+const connect_pg_simple_1 = __importDefault(require("connect-pg-simple"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 // 1. Enhanced CORS Configurations
@@ -39,24 +40,24 @@ app.use((0, cors_1.default)({
 // 2. Handle preflight requests globally
 app.options('*', (0, cors_1.default)());
 // 3. Enhanced Session Configuration
+// import session from 'express-session';
+// Initialize session store
+const PGStore = (0, connect_pg_simple_1.default)(express_session_1.default);
 app.use((0, express_session_1.default)({
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    proxy: true, // Always enable proxy trust for Render
+    proxy: true, // Required for Render
     cookie: {
-        secure: true, // Must ALWAYS be true in production (Render uses HTTPS)
+        secure: true, // Must be true in production
         httpOnly: true,
-        sameSite: 'none', // Required for cross-origin (Vercel ↔ Render)
-        maxAge: 24 * 60 * 60 * 1000,
-        // Remove domain completely - let browsers handle it automatically
+        sameSite: 'none', // Required for cross-origin
+        maxAge: 24 * 60 * 60 * 1000
     },
-    store: process.env.NODE_ENV === 'production'
-        ? new (require('connect-pg-simple')(express_session_1.default))({
-            conString: process.env.DATABASE_URL,
-            createTableIfMissing: true
-        })
-        : undefined // Use memory store in development
+    store: new PGStore({
+        conString: process.env.DATABASE_URL,
+        createTableIfMissing: true
+    })
 }));
 // 4. Body parser middleware
 app.use(express_1.default.json({ limit: '10mb' }));

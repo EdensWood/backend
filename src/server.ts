@@ -6,6 +6,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import schema from "./graphql/schema";
 import sequelize from "./config/database";
+import pgSession from 'connect-pg-simple';
 
 dotenv.config();
 
@@ -45,25 +46,26 @@ app.use(
 app.options('*', cors());
 
 // 3. Enhanced Session Configuration
+// import session from 'express-session';
+// Initialize session store
+const PGStore = pgSession(session);
+
 app.use(
   session({
     secret: process.env.SESSION_SECRET as string,
     resave: false,
     saveUninitialized: false,
-    proxy: true, // Always enable proxy trust for Render
+    proxy: true, // Required for Render
     cookie: { 
-      secure: true, // Must ALWAYS be true in production (Render uses HTTPS)
+      secure: true, // Must be true in production
       httpOnly: true,
-      sameSite: 'none', // Required for cross-origin (Vercel ↔ Render)
-      maxAge: 24 * 60 * 60 * 1000,
-      // Remove domain completely - let browsers handle it automatically
+      sameSite: 'none', // Required for cross-origin
+      maxAge: 24 * 60 * 60 * 1000
     },
-    store: process.env.NODE_ENV === 'production' 
-      ? new (require('connect-pg-simple')(session))({
-        conString: process.env.DATABASE_URL,
-        createTableIfMissing: true
-      })
-      : undefined // Use memory store in development
+    store: new PGStore({
+      conString: process.env.DATABASE_URL,
+      createTableIfMissing: true
+    })
   })
 );
 
