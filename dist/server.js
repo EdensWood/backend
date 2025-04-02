@@ -10,7 +10,7 @@ const express_session_1 = __importDefault(require("express-session"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const schema_1 = __importDefault(require("./graphql/schema"));
-const database_1 = __importDefault(require("../src/config/database"));
+const database_1 = __importDefault(require("./config/database"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 // Enhanced CORS configuration
