@@ -5,7 +5,7 @@ import session from "express-session";
 import cors from "cors";
 import dotenv from "dotenv";
 import schema from "./graphql/schema";
-import sequelize from "../src/config/database";
+import sequelize from "./config/database";
 
 dotenv.config();
 
