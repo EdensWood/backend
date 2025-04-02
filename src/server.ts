@@ -13,7 +13,7 @@ const app = express();
 
 // 1. Enhanced CORS Configuration
 const allowedOrigins = [
-  "https://task-manager-frontend-l2cre69w0-leafywoods-projects.vercel.app",
+  "https://task-manager-frontend-eight-lilac.vercel.app/",
   "http://localhost:3000"
 ];
 
