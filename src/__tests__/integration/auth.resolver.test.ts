@@ -37,7 +37,7 @@
 //       }
 //     `;
 
-//     const response = await mutate({
+//     const response = await mugit tate({
 //       mutation: REGISTER,
 //       variables: {
 //         input: {
