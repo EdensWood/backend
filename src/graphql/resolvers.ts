@@ -126,38 +126,39 @@ login: async (_: any, { email, password }: any, { req }: ContextType) => {
     const user = await User.findOne({
       where: { email },
       attributes: ["id", "name", "email", "password"],
-      raw: true,
+      raw: false // Must be false for sessions to work
     });
 
-    console.log("Found user:", user);
     if (!user) {
-      console.log("No user found with this email");
       throw new Error("Invalid credentials");
     }
 
     // 2. Compare passwords
-    console.log("Comparing passwords...");
     const passwordMatch = await bcrypt.compare(password, user.password);
-    console.log("Password match result:", passwordMatch);
-
     if (!passwordMatch) {
-      console.log("Password comparison failed");
       throw new Error("Invalid credentials");
     }
 
-    // 3. Generate token
+    // 3. Create session (CRITICAL FIX)
+    req.session.userId = user.id;
+    await new Promise<void>((resolve, reject) => {
+      req.session.save(err => {
+        if (err) {
+          console.error("Session save error:", err);
+          reject(err);
+        } else {
+          console.log("Session saved successfully:", req.sessionID);
+          resolve();
+        }
+      });
+    });
+
+    // 4. Generate token (optional if using sessions)
     const token = jwt.sign(
       { userId: user.id },
       process.env.JWT_SECRET || "fallback_secret",
       { expiresIn: "1h" }
     );
-
-    // 4. Set session
-    req.session.userId = user.id;
-    // After setting the session or generating the token
-    console.log("User session after login:", req.session);  // For session
-    console.log("Generated token:", token);  // For JWT
-
 
     return {
       user: {
@@ -169,8 +170,8 @@ login: async (_: any, { email, password }: any, { req }: ContextType) => {
       message: "Login successful",
     };
   } catch (error) {
-    console.error("Detailed login error:", error);
-    throw new Error(error instanceof Error ? `Login failed: ${error.message}` : "Login failed due to an unknown error");
+    console.error("Login error:", error);
+    throw new Error("Login failed. Please try again.");
   }
 },
       logout: async (_: any, __: any, { req, res }: any) => {

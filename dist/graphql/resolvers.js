@@ -109,28 +109,32 @@ const resolvers = {
                 const user = await models_1.User.findOne({
                     where: { email },
                     attributes: ["id", "name", "email", "password"],
-                    raw: true,
+                    raw: false // Must be false for sessions to work
                 });
-                console.log("Found user:", user);
                 if (!user) {
-                    console.log("No user found with this email");
                     throw new Error("Invalid credentials");
                 }
                 // 2. Compare passwords
-                console.log("Comparing passwords...");
                 const passwordMatch = await bcryptjs_1.default.compare(password, user.password);
-                console.log("Password match result:", passwordMatch);
                 if (!passwordMatch) {
-                    console.log("Password comparison failed");
                     throw new Error("Invalid credentials");
                 }
-                // 3. Generate token
-                const token = jsonwebtoken_1.default.sign({ userId: user.id }, process.env.JWT_SECRET || "fallback_secret", { expiresIn: "1h" });
-                // 4. Set session
+                // 3. Create session (CRITICAL FIX)
                 req.session.userId = user.id;
-                // After setting the session or generating the token
-                console.log("User session after login:", req.session); // For session
-                console.log("Generated token:", token); // For JWT
+                await new Promise((resolve, reject) => {
+                    req.session.save(err => {
+                        if (err) {
+                            console.error("Session save error:", err);
+                            reject(err);
+                        }
+                        else {
+                            console.log("Session saved successfully:", req.sessionID);
+                            resolve();
+                        }
+                    });
+                });
+                // 4. Generate token (optional if using sessions)
+                const token = jsonwebtoken_1.default.sign({ userId: user.id }, process.env.JWT_SECRET || "fallback_secret", { expiresIn: "1h" });
                 return {
                     user: {
                         id: user.id.toString(),
@@ -142,8 +146,8 @@ const resolvers = {
                 };
             }
             catch (error) {
-                console.error("Detailed login error:", error);
-                throw new Error(error instanceof Error ? `Login failed: ${error.message}` : "Login failed due to an unknown error");
+                console.error("Login error:", error);
+                throw new Error("Login failed. Please try again.");
             }
         },
         logout: async (_, __, { req, res }) => {
