@@ -4,15 +4,15 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const sequelize = new Sequelize(
-  process.env.DB_NAME as string,
-  process.env.DB_USER as string,
-  process.env.DB_PASS as string,
-  {
-    host: process.env.DB_HOST,
-    dialect: 'postgres',
-    logging: false,
-  }
-);
+const sequelize = new Sequelize(process.env.DATABASE_URL!, { // Use Render's URL
+  dialect: 'postgres',
+  dialectOptions: {
+    ssl: { // Required for Render PostgreSQL
+      require: true,
+      rejectUnauthorized: false,
+    },
+  },
+  logging: false,
+});
 
 export default sequelize;
