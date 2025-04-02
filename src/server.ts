@@ -14,7 +14,10 @@ const app = express();
 // Enhanced CORS configuration
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: [
+      "https://task-manager-frontend-eight-lilac.vercel.app/",
+      "http://localhost:3000"
+    ],
     credentials: true,
     exposedHeaders: ['set-cookie'] // Important for cookies
   })
