@@ -13,7 +13,7 @@ const schema_1 = __importDefault(require("./graphql/schema"));
 const database_1 = __importDefault(require("./config/database"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
-// 1. Enhanced CORS Configuration
+// 1. Enhanced CORS Configurations
 const allowedOrigins = [
     "https://task-manager-frontend-eight-lilac.vercel.app/",
     "http://localhost:3000"
