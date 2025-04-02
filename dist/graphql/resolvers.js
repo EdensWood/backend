@@ -112,11 +112,13 @@ const resolvers = {
                     raw: false // Must be false for sessions to work
                 });
                 if (!user) {
+                    console.error("User not found");
                     throw new Error("Invalid credentials");
                 }
                 // 2. Compare passwords
                 const passwordMatch = await bcryptjs_1.default.compare(password, user.password);
                 if (!passwordMatch) {
+                    console.error("Password mismatch");
                     throw new Error("Invalid credentials");
                 }
                 // 3. Create session (CRITICAL FIX)
@@ -149,8 +151,7 @@ const resolvers = {
                 console.error("Login error:", error);
                 throw new Error("Login failed. Please try again.");
             }
-        },
-        logout: async (_, __, { req, res }) => {
+        }, logout: async (_, __, { req, res }) => {
             // Clear session/cookie (implementation depends on your auth)
             await new Promise((resolve) => {
                 req.session.destroy((err) => {
