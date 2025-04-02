@@ -6,7 +6,8 @@
     "build": "npm rebuild bcrypt --update-binary && tsc && cp -r src/graphql/ dist/",
     "watch": "ts-node-dev src/server.ts",
     "clean": "rm -rf dist/ && mkdir dist/",
-    "render-build": "npm run clean && npm run build"
+    "render-build": "npm run clean && npm run build",
+    "postinstall": "npm install --save-dev @types/jsonwebtoken @types/connect-pg-simple @types/pg"
   },
   "dependencies": {
     "@apollo/server": "^4.11.3",
