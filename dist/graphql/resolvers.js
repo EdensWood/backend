@@ -115,6 +115,10 @@ const resolvers = {
                     console.error("User not found");
                     throw new Error("Invalid credentials");
                 }
+                // Additional logging to debug
+                console.log(`Retrieved user: ${JSON.stringify(user)}`);
+                console.log(`Plain text password: ${password}`);
+                console.log(`Hashed password: ${user.password}`);
                 // 2. Compare passwords
                 const passwordMatch = await bcryptjs_1.default.compare(password, user.password);
                 if (!passwordMatch) {
@@ -151,7 +155,8 @@ const resolvers = {
                 console.error("Login error:", error);
                 throw new Error("Login failed. Please try again.");
             }
-        }, logout: async (_, __, { req, res }) => {
+        },
+        logout: async (_, __, { req, res }) => {
             // Clear session/cookie (implementation depends on your auth)
             await new Promise((resolve) => {
                 req.session.destroy((err) => {

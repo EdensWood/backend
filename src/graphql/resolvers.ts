@@ -134,6 +134,11 @@ login: async (_: any, { email, password }: any, { req }: ContextType) => {
       throw new Error("Invalid credentials");
     }
 
+    // Additional logging to debug
+    console.log(`Retrieved user: ${JSON.stringify(user)}`);
+    console.log(`Plain text password: ${password}`);
+    console.log(`Hashed password: ${user.password}`);
+
     // 2. Compare passwords
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
@@ -175,7 +180,10 @@ login: async (_: any, { email, password }: any, { req }: ContextType) => {
     console.error("Login error:", error);
     throw new Error("Login failed. Please try again.");
   }
-},      logout: async (_: any, __: any, { req, res }: any) => {
+},   
+
+
+logout: async (_: any, __: any, { req, res }: any) => {
         // Clear session/cookie (implementation depends on your auth)
         await new Promise<void>((resolve) => {
           req.session.destroy((err: any) => {
