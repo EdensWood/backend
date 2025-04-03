@@ -120,7 +120,7 @@ const resolvers = {
                 const user = await models_1.User.findOne({
                     where: { email },
                     attributes: ["id", "name", "email", "password"],
-                    raw: false // Must be false for sessions to work
+                    raw: true // Must be false for sessions to work
                 });
                 if (!user) {
                     console.error("User not found");
