@@ -21,19 +21,24 @@ const resolvers = {
     },
     tasks: async () => await Task.findAll({ include: [{ model: User, as: "user" }] }),
     // In your resolvers.ts
-    myTasks: async (_: any, __: any, { user }: ContextType) => {
-      if (!user) throw new Error("Unauthorized");
-
+    myTasks: async (_: any, __: any, { req }: ContextType) => {
       try {
-        console.log("Fetching tasks for user:", user.id);
-
+        console.log("Session data in myTasks resolver:", req.session);
+    
+        if (!req.session.userId) {
+          console.error("Unauthorized GraphQL access attempt");
+          throw new Error("Unauthorized");
+        }
+    
+        console.log("Fetching tasks for user:", req.session.userId);
+    
         const tasks = await Task.findAll({
-          where: { userId: user.id },
+          where: { userId: req.session.userId },
           include: [{ model: User, as: "user" }]
         });
-
+    
         console.log("Fetched Tasks:", tasks);
-
+    
         return tasks.map(task => ({
           id: task.id.toString(),
           title: task.title ?? "No Title",
@@ -49,6 +54,7 @@ const resolvers = {
         throw new Error("Failed to fetch tasks");
       }
     },
+    
     
     // In your me resolver
     me: async (_: any, __: any, { req }: ContextType) => {
@@ -152,6 +158,7 @@ login: async (_: any, { email, password }: any, { req }: ContextType) => {
           reject(err);
         } else {
           console.log("Session saved successfully:", req.sessionID);
+            console.log("Session after login:", req.session);
           resolve();
         }
       });

@@ -15,13 +15,16 @@ const resolvers = {
         },
         tasks: async () => await models_1.Task.findAll({ include: [{ model: models_1.User, as: "user" }] }),
         // In your resolvers.ts
-        myTasks: async (_, __, { user }) => {
-            if (!user)
-                throw new Error("Unauthorized");
+        myTasks: async (_, __, { req }) => {
             try {
-                console.log("Fetching tasks for user:", user.id);
+                console.log("Session data in myTasks resolver:", req.session);
+                if (!req.session.userId) {
+                    console.error("Unauthorized GraphQL access attempt");
+                    throw new Error("Unauthorized");
+                }
+                console.log("Fetching tasks for user:", req.session.userId);
                 const tasks = await models_1.Task.findAll({
-                    where: { userId: user.id },
+                    where: { userId: req.session.userId },
                     include: [{ model: models_1.User, as: "user" }]
                 });
                 console.log("Fetched Tasks:", tasks);
@@ -131,6 +134,7 @@ const resolvers = {
                         }
                         else {
                             console.log("Session saved successfully:", req.sessionID);
+                            console.log("Session after login:", req.session);
                             resolve();
                         }
                     });
