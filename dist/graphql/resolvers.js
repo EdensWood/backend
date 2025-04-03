@@ -8,12 +8,13 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const models_1 = require("../models");
 const resolvers = {
     Query: {
-        users: async (_, __, { user }) => {
-            if (!user)
+        users: async (_, __, { req }) => {
+            if (!req.session.userId)
                 throw new Error("Unauthorized");
             return await models_1.User.findAll();
         },
         tasks: async () => await models_1.Task.findAll({ include: [{ model: models_1.User, as: "user" }] }),
+        // In your resolvers.ts
         myTasks: async (_, __, { user }) => {
             if (!user)
                 throw new Error("Unauthorized");
@@ -40,36 +41,61 @@ const resolvers = {
                 throw new Error("Failed to fetch tasks");
             }
         },
-        me: async (_, __, { user }) => {
-            if (!user)
+        // In your me resolver
+        me: async (_, __, { req }) => {
+            if (req.session.userId) {
+                // Session-based auth
+                return await models_1.User.findByPk(req.session.userId, { attributes: ["id", "name", "email"] });
+            }
+            const authHeader = req.headers.authorization || '';
+            const token = authHeader.replace('Bearer ', '');
+            if (!token)
                 return null;
-            return await models_1.User.findByPk(user.id, { attributes: ["id", "name", "email"] });
-        },
+            try {
+                const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET || "fallback_secret");
+                return await models_1.User.findByPk(decoded.userId, { attributes: ["id", "name", "email"] });
+            }
+            catch (err) {
+                console.error("JWT verification error:", err);
+                return null;
+            }
+        }
     },
     Mutation: {
+        // resolvers.ts - Revised Register Resolver
         register: async (_, { name, email, password }) => {
             try {
                 const existingUser = await models_1.User.findOne({ where: { email } });
                 if (existingUser)
                     throw new Error("Email already exists");
-                console.log("Original password:", password);
+                console.log('Original password:', password);
                 const hashedPassword = await bcryptjs_1.default.hash(password, 10);
-                console.log("Hashed password:", hashedPassword);
-                const newUser = await models_1.User.create({ name, email, password: hashedPassword });
+                console.log('Hashed password:', hashedPassword);
+                const newUser = await models_1.User.create({
+                    name,
+                    email,
+                    password: hashedPassword // Ensure this is the hashed version
+                });
+                // Convert to plain object and handle ID conversion
                 const userData = newUser.get({ plain: true });
                 return {
                     user: {
-                        id: userData.id,
+                        id: userData.id, // Convert to string for GraphQL ID
                         name: userData.name,
                         email: userData.email
                     },
-                    token: jsonwebtoken_1.default.sign({ userId: userData.id }, process.env.JWT_SECRET || "fallback_secret", { expiresIn: "1h" }),
+                    token: jsonwebtoken_1.default.sign({ userId: userData.id }, process.env.JWT_SECRET || 'fallback_secret', { expiresIn: '1h' }),
                     message: "Registration successful"
                 };
             }
             catch (error) {
                 console.error("Registration error:", error);
-                throw new Error("Registration failed. Please try again.");
+                if (error instanceof Error) {
+                    throw new Error(`Registration failed: ${error.message}`);
+                }
+                else {
+                    throw new Error("Registration failed due to an unknown error");
+                }
             }
         },
         login: async (_, { email, password }, { req }) => {
@@ -98,27 +124,31 @@ const resolvers = {
             }
         },
         logout: async (_, __, { req, res }) => {
+            // Clear session/cookie (implementation depends on your auth)
             await new Promise((resolve) => {
                 req.session.destroy((err) => {
-                    res.clearCookie("connect.sid");
+                    res.clearCookie('your-session-cookie-name');
                     resolve();
                 });
             });
             return true;
         },
-        createTask: async (_, { title, description, status }, { user }) => {
-            if (!user)
+        createTask: async (_, { title, description, status }, { req }) => {
+            if (!req.session.userId)
                 throw new Error("Unauthorized");
             try {
+                // Create the task
                 const newTask = await models_1.Task.create({
                     title,
                     description,
                     status,
-                    userId: user.id
+                    userId: req.session.userId
                 });
+                // Convert to plain object and ensure ID is included
                 const taskData = newTask.get({ plain: true });
+                // Return in correct format
                 return {
-                    id: taskData.id.toString(),
+                    id: taskData.id.toString(), // Convert to string if using GraphQL ID type
                     title: taskData.title,
                     description: taskData.description,
                     status: taskData.status,
@@ -130,26 +160,34 @@ const resolvers = {
                 throw new Error("Failed to create task");
             }
         },
-        updateTask: async (_, { id, title, description, status }, { user }) => {
-            if (!user)
+        updateTask: async (_, { id, title, description, status }, { req }) => {
+            console.log("Session User ID:", req.session.userId);
+            if (!req.session.userId)
                 throw new Error("Unauthorized");
-            const task = await models_1.Task.findByPk(Number(id));
+            console.log("Task ID received:", id);
+            const task = await models_1.Task.findByPk(Number(id), { raw: true });
+            console.log("Fetched Task:", task);
             if (!task)
                 throw new Error("Task not found");
-            if (task.userId !== user.id)
+            if (task.userId !== req.session.userId)
                 throw new Error("Unauthorized access to task");
-            await task.update({ title, description, status });
-            return task.get({ plain: true });
+            await models_1.Task.update({ title, description, status }, { where: { id } });
+            const updatedTask = await models_1.Task.findByPk(Number(id), { raw: true });
+            return updatedTask;
         },
-        deleteTask: async (_, { id }, { user }) => {
-            if (!user)
+        deleteTask: async (_, { id }, { req }) => {
+            console.log("Session User ID:", req.session.userId);
+            if (!req.session.userId)
                 throw new Error("Unauthorized");
-            const task = await models_1.Task.findByPk(Number(id));
+            console.log("Task ID received for deletion:", id);
+            const task = await models_1.Task.findByPk(Number(id), { raw: true });
+            console.log("Fetched Task:", task);
             if (!task)
                 throw new Error("Task not found");
-            if (task.userId !== user.id)
+            if (task.userId !== req.session.userId)
                 throw new Error("Unauthorized access to task");
-            await task.destroy();
+            await models_1.Task.destroy({ where: { id } });
+            console.log(`Task with ID ${id} deleted successfully.`);
             return "Task deleted successfully";
         },
     },
