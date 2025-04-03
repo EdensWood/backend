@@ -105,6 +105,14 @@ app.use(
   })
 );
 
+
+app.get("/auth/check-session", (req, res) => {
+  if (req.session.userId) {
+    res.status(200).json({ authenticated: true, userId: req.session.userId });
+  } else {
+    res.status(401).json({ authenticated: false });
+  }
+});
 // =====================
 // 5. Body Parsers
 // =====================

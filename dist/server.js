@@ -89,6 +89,14 @@ app.use((0, express_session_1.default)({
         pruneSessionInterval: 60 // Cleanup expired sessions every 60 minutes
     })
 }));
+app.get("/auth/check-session", (req, res) => {
+    if (req.session.userId) {
+        res.status(200).json({ authenticated: true, userId: req.session.userId });
+    }
+    else {
+        res.status(401).json({ authenticated: false });
+    }
+});
 // =====================
 // 5. Body Parsers
 // =====================
