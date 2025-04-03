@@ -2,6 +2,7 @@ import express from "express";
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@apollo/server/express4";
 import session from "express-session";
+//@ts-ignore
 import cors, { CorsOptions, CorsRequest } from "cors";
 import dotenv from "dotenv";
 import schema from "./graphql/schema";

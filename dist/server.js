@@ -7,6 +7,7 @@ const express_1 = __importDefault(require("express"));
 const server_1 = require("@apollo/server");
 const express4_1 = require("@apollo/server/express4");
 const express_session_1 = __importDefault(require("express-session"));
+//@ts-ignore
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const schema_1 = __importDefault(require("./graphql/schema"));
