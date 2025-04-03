@@ -25,7 +25,7 @@ app.set("trust proxy", 1); // Required for secure cookies in production
 // 2. CORS Setup
 // =================
 const allowedOrigins = [
-  "https://task-manager-frontend-3qrv87a9k-leafywoods-projects.vercel.app",
+  "https://task-manager-frontend-at42pryxl-leafywoods-projects.vercel.app",
 ];
 
 app.use(
