@@ -83,6 +83,10 @@ app.use((0, express_session_1.default)({
 // =====================
 app.use(express_1.default.json({ limit: "10mb" }));
 app.use(express_1.default.urlencoded({ extended: true }));
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Credentials', 'true');
+    next();
+});
 // =====================
 // 6. Apollo Server Setup
 // =====================
