@@ -7,7 +7,8 @@ import dotenv from "dotenv";
 import schema from "./graphql/schema";
 import sequelize from "./config/database";
 import pgSession from "connect-pg-simple";
-import { Pool } from 'pg';
+import pg from 'pg';
+const { Pool } = pg;
 import helmet from "helmet";
 
 dotenv.config();
@@ -75,7 +76,7 @@ app.use(
       httpOnly: true,
       sameSite: "none", // Required for cross-site cookies
       maxAge: 7 * 24 * 60 * 60 * 1000, // 1 week
-      domain: process.env.NODE_ENV === "production" ? ".yourdomain.com" : undefined
+      domain: process.env.NODE_ENV === "production" ? "https://backend-l9gz.onrender.com" : undefined
     },
     store: new PGStore({
       pool: pgPool,
@@ -126,18 +127,20 @@ const startServer = async () => {
     // GraphQL endpoint with session debugging
     app.use(
       "/graphql",
-      (req, res, next) => {
-        console.log("🔍 Session Debug:", {
-          sessionID: req.sessionID,
-          userId: req.session?.userId || null,
-          cookies: req.headers.cookie,
-          origin: req.headers.origin
-        });
-        next();
-      },
+      cors<cors.CorsRequest>({
+        origin: allowedOrigins,
+        credentials: true
+      }),
+      express.json(),
       expressMiddleware(server, {
-        context: async ({ req, res }) => ({ req, res }),
-      }) as any
+        context: async ({ req, res }) => {
+          // Add session verification here
+          if (!req.session.userId) {
+            console.warn('Unauthorized GraphQL access attempt');
+          }
+          return { req, res };
+        },
+      })as any
     );
 
     // Health check endpoint

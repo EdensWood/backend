@@ -12,7 +12,8 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const schema_1 = __importDefault(require("./graphql/schema"));
 const database_1 = __importDefault(require("./config/database"));
 const connect_pg_simple_1 = __importDefault(require("connect-pg-simple"));
-const pg_1 = require("pg");
+const pg_1 = __importDefault(require("pg"));
+const { Pool } = pg_1.default;
 const helmet_1 = __importDefault(require("helmet"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
@@ -46,7 +47,7 @@ app.options("*", (0, cors_1.default)()); // Handle preflight globally
 // ======================
 // 3. Database Connection
 // ======================
-const pgPool = new pg_1.Pool({
+const pgPool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === "production" ? {
         rejectUnauthorized: false // Required for Render/Heroku
@@ -68,7 +69,7 @@ app.use((0, express_session_1.default)({
         httpOnly: true,
         sameSite: "none", // Required for cross-site cookies
         maxAge: 7 * 24 * 60 * 60 * 1000, // 1 week
-        domain: process.env.NODE_ENV === "production" ? ".yourdomain.com" : undefined
+        domain: process.env.NODE_ENV === "production" ? "https://backend-l9gz.onrender.com" : undefined
     },
     store: new PGStore({
         pool: pgPool,
@@ -110,16 +111,17 @@ const startServer = async () => {
         // Start Apollo Server
         await server.start();
         // GraphQL endpoint with session debugging
-        app.use("/graphql", (req, res, next) => {
-            console.log("🔍 Session Debug:", {
-                sessionID: req.sessionID,
-                userId: req.session?.userId || null,
-                cookies: req.headers.cookie,
-                origin: req.headers.origin
-            });
-            next();
-        }, (0, express4_1.expressMiddleware)(server, {
-            context: async ({ req, res }) => ({ req, res }),
+        app.use("/graphql", (0, cors_1.default)({
+            origin: allowedOrigins,
+            credentials: true
+        }), express_1.default.json(), (0, express4_1.expressMiddleware)(server, {
+            context: async ({ req, res }) => {
+                // Add session verification here
+                if (!req.session.userId) {
+                    console.warn('Unauthorized GraphQL access attempt');
+                }
+                return { req, res };
+            },
         }));
         // Health check endpoint
         app.get("/health", (_, res) => {
