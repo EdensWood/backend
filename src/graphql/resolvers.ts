@@ -118,21 +118,57 @@ login: async (_: any, { email, password }: any, { req }: ContextType) => {
   try {
     console.log(`Login attempt for email: ${email}`);
 
-    const user = await User.findOne({ where: { email }, attributes: ["id", "name", "email", "password"] });
-    if (!user) throw new Error("Invalid credentials");
-
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) throw new Error("Invalid credentials");
-
-    req.session.userId = user.id;
-    await new Promise<void>((resolve, reject) => {
-      req.session.save(err => (err ? reject(err) : resolve()));
+    // 1. Find user
+    const user = await User.findOne({
+      where: { email },
+      attributes: ["id", "name", "email", "password"],
+      raw: true// Must be false for sessions to work
     });
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || "fallback_secret", { expiresIn: "1h" });
+    if (!user) {
+      console.error("User not found");
+      throw new Error("Invalid credentials");
+    }
+
+    // Additional logging to debug
+    console.log(`Retrieved user: ${JSON.stringify(user)}`);
+    console.log(`Plain text password: ${password}`);
+    console.log(`Hashed password: ${user.password}`);
+
+    // 2. Compare passwords
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
+      console.error("Password mismatch");
+      throw new Error("Invalid credentials");
+    }
+
+    // 3. Create session (CRITICAL FIX)
+    req.session.userId = user.id;
+    await new Promise<void>((resolve, reject) => {
+      req.session.save(err => {
+        if (err) {
+          console.error("Session save error:", err);
+          reject(err);
+        } else {
+          console.log("Session saved successfully:", req.sessionID);
+          resolve();
+        }
+      });
+    });
+
+    // 4. Generate token (optional if using sessions)
+    const token = jwt.sign(
+      { userId: user.id },
+      process.env.JWT_SECRET || "fallback_secret",
+      { expiresIn: "1h" }
+    );
 
     return {
-      user: { id: user.id.toString(), name: user.name, email: user.email },
+      user: {
+        id: user.id.toString(),
+        name: user.name,
+        email: user.email,
+      },
       token,
       message: "Login successful",
     };
@@ -140,7 +176,7 @@ login: async (_: any, { email, password }: any, { req }: ContextType) => {
     console.error("Login error:", error);
     throw new Error("Login failed. Please try again.");
   }
-},  
+},   
 
 
 logout: async (_: any, __: any, { req, res }: any) => {

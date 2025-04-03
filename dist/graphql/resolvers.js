@@ -101,19 +101,48 @@ const resolvers = {
         login: async (_, { email, password }, { req }) => {
             try {
                 console.log(`Login attempt for email: ${email}`);
-                const user = await models_1.User.findOne({ where: { email }, attributes: ["id", "name", "email", "password"] });
-                if (!user)
+                // 1. Find user
+                const user = await models_1.User.findOne({
+                    where: { email },
+                    attributes: ["id", "name", "email", "password"],
+                    raw: true // Must be false for sessions to work
+                });
+                if (!user) {
+                    console.error("User not found");
                     throw new Error("Invalid credentials");
+                }
+                // Additional logging to debug
+                console.log(`Retrieved user: ${JSON.stringify(user)}`);
+                console.log(`Plain text password: ${password}`);
+                console.log(`Hashed password: ${user.password}`);
+                // 2. Compare passwords
                 const passwordMatch = await bcryptjs_1.default.compare(password, user.password);
-                if (!passwordMatch)
+                if (!passwordMatch) {
+                    console.error("Password mismatch");
                     throw new Error("Invalid credentials");
+                }
+                // 3. Create session (CRITICAL FIX)
                 req.session.userId = user.id;
                 await new Promise((resolve, reject) => {
-                    req.session.save(err => (err ? reject(err) : resolve()));
+                    req.session.save(err => {
+                        if (err) {
+                            console.error("Session save error:", err);
+                            reject(err);
+                        }
+                        else {
+                            console.log("Session saved successfully:", req.sessionID);
+                            resolve();
+                        }
+                    });
                 });
+                // 4. Generate token (optional if using sessions)
                 const token = jsonwebtoken_1.default.sign({ userId: user.id }, process.env.JWT_SECRET || "fallback_secret", { expiresIn: "1h" });
                 return {
-                    user: { id: user.id.toString(), name: user.name, email: user.email },
+                    user: {
+                        id: user.id.toString(),
+                        name: user.name,
+                        email: user.email,
+                    },
                     token,
                     message: "Login successful",
                 };
