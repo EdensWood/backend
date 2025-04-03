@@ -25,7 +25,8 @@ const resolvers = {
                 console.log("Fetching tasks for user:", req.session.userId);
                 const tasks = await models_1.Task.findAll({
                     where: { userId: req.session.userId },
-                    include: [{ model: models_1.User, as: "user" }]
+                    include: [{ model: models_1.User, as: "user" }],
+                    raw: false
                 });
                 console.log("Fetched Tasks:", tasks);
                 return tasks.map(task => ({

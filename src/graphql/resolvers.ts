@@ -34,7 +34,8 @@ const resolvers = {
     
         const tasks = await Task.findAll({
           where: { userId: req.session.userId },
-          include: [{ model: User, as: "user" }]
+          include: [{ model: User, as: "user" }],
+          raw: false
         });
     
         console.log("Fetched Tasks:", tasks);
