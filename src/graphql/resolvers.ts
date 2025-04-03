@@ -50,7 +50,7 @@ const resolvers = {
       // Ensure task.id exists before calling toString
       if (!task.id) {
         console.error("Task ID is undefined or null:", task);
-        throw new Error("Task ID is missing");
+        return { id: "UNKNOWN", title: "No Title", description: "No Description", status: "UNKNOWN", user: { id: "UNKNOWN", name: "No Name" } };
       }
 
       return {
@@ -211,34 +211,50 @@ logout: async (_: any, __: any, { req, res }: any) => {
         });
         return true;
       },
-    createTask: async (_: any, { title, description, status }: any, { req }: ContextType) => {
-      if (!req.session.userId) throw new Error("Unauthorized");
-    
-      try {
-        // Create the task
-        const newTask = await Task.create({
-          title,
-          description,
-          status,
-          userId: req.session.userId
-        });
-    
-        // Convert to plain object and ensure ID is included
-        const taskData = newTask.get({ plain: true });
-    
-        // Return in correct format
-        return {
-          id: taskData.id.toString(), // Convert to string if using GraphQL ID type
-          title: taskData.title,
-          description: taskData.description,
-          status: taskData.status,
-          userId: taskData.userId
-        };
-      } catch (error) {
-        console.error("Task creation error:", error);
-        throw new Error("Failed to create task");
-      }
-    },
+      createTask: async (
+        _: any,
+        { title, description, status }: { title: string; description?: string; status?: "PENDING" | "IN_PROGRESS" | "COMPLETED" },
+        { req }: ContextType
+      ) => {
+        if (!req.session.userId) {
+          throw new Error("Unauthorized");
+        }
+      
+        try {
+          // Create the task
+          const newTask = await Task.create({
+            title,
+            description: description || "", // Ensure description isn't undefined
+            status: status || "PENDING", // Default status if not provided
+            userId: req.session.userId,
+          });
+      
+          if (!newTask || !newTask.id) {
+            throw new Error("Task creation failed: Missing ID");
+          }
+      
+          // Convert to plain object
+          const taskData = newTask.get({ plain: true });
+      
+          console.log("New task created:", taskData); // Debugging log
+      
+          // Return in the correct format
+          return {
+            id: taskData.id.toString(),
+            title: taskData.title,
+            description: taskData.description,
+            status: taskData.status,
+            user: {
+              id: req.session.userId.toString(), // Ensuring user data is correctly linked
+              name: "Unknown", // You may want to fetch the user's name
+            },
+          };
+        } catch (error) {
+          console.error("Task creation error:", error);
+          throw new Error("Failed to create task");
+        }
+      },
+      
     
     
     updateTask: async (_: any, { id, title, description, status }: any, { req }: ContextType) => {
