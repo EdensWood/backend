@@ -126,7 +126,7 @@ login: async (_: any, { email, password }: any, { req }: ContextType) => {
     const user = await User.findOne({
       where: { email },
       attributes: ["id", "name", "email", "password"],
-      raw: false // Must be false for sessions to work
+      raw: true// Must be false for sessions to work
     });
 
     if (!user) {
