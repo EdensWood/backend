@@ -69,7 +69,7 @@ app.use((0, express_session_1.default)({
         httpOnly: true,
         sameSite: "none", // Required for cross-site cookies
         maxAge: 7 * 24 * 60 * 60 * 1000, // 1 week
-        domain: process.env.NODE_ENV === "production" ? "https://backend-l9gz.onrender.com" : undefined
+        domain: process.env.NODE_ENV === "production" ? "yourdomain.com" : undefined
     },
     store: new PGStore({
         pool: pgPool,
