@@ -18,6 +18,19 @@ const helmet_1 = __importDefault(require("helmet"));
 const models_1 = require("./models");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
+const corsOptions = {
+    origin: (origin, callback) => {
+        // Allow specific origins or all origins
+        if (origin && origin === 'https://your-allowed-origin.com') {
+            callback(null, true); // Allow the origin
+        }
+        else {
+            callback(new Error('Not allowed by CORS')); // Reject the origin
+        }
+    },
+    credentials: true, // Allow credentials (cookies, authorization headers)
+    optionsSuccessStatus: 200, // Handle preflight requests correctly
+};
 // =======================
 // 1. Security Middlewares
 // =======================

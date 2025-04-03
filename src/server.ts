@@ -2,7 +2,7 @@ import express from "express";
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@apollo/server/express4";
 import session from "express-session";
-import cors from "cors";
+import cors, { CorsOptions } from "cors";
 import dotenv from "dotenv";
 import schema from "./graphql/schema";
 import sequelize from "./config/database";
@@ -22,6 +22,19 @@ interface MyContext {
 }
 
 const app = express();
+
+const corsOptions: CorsOptions = {
+  origin: (origin: string | undefined, callback: (error: any, allow?: boolean) => void) => {
+    // Allow specific origins or all origins
+    if (origin && origin === 'https://your-allowed-origin.com') {
+      callback(null, true); // Allow the origin
+    } else {
+      callback(new Error('Not allowed by CORS')); // Reject the origin
+    }
+  },
+  credentials: true, // Allow credentials (cookies, authorization headers)
+  optionsSuccessStatus: 200, // Handle preflight requests correctly
+};
 
 // =======================
 // 1. Security Middlewares
