@@ -90,14 +90,6 @@ app.use((req, res, next) => {
 // =====================
 const server = new server_1.ApolloServer({
     schema: schema_1.default,
-    introspection: process.env.NODE_ENV !== "production",
-    formatError: (error) => {
-        console.error("GraphQL Error:", error);
-        return {
-            message: error.message,
-            code: error.extensions?.code || "INTERNAL_SERVER_ERROR",
-        };
-    },
 });
 // =====================
 // 7. Server Startup
@@ -119,20 +111,10 @@ const startServer = async () => {
         }), express_1.default.json(), (0, express4_1.expressMiddleware)(server, {
             context: async ({ req, res }) => {
                 console.log("Session Data:", req.session);
-                // Add session verification here
-                if (!req.session.userId) {
-                    console.warn('Unauthorized GraphQL access attempt');
-                }
-                return { req, res, user: req.session.userId && await models_1.User.findByPk(req.session.userId) };
+                const userId = req.session?.userId;
+                return { req, res, userId, user: userId && await models_1.User.findByPk(userId) };
             },
         }));
-        // Health check endpoint
-        app.get("/health", (_, res) => {
-            res.status(200).json({
-                status: "healthy",
-                session: _.session?.userId ? "authenticated" : "anonymous"
-            });
-        });
         // Start server
         const PORT = process.env.PORT || 4000;
         app.listen(PORT, () => {

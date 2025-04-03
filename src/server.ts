@@ -11,8 +11,15 @@ import pg from 'pg';
 const { Pool } = pg;
 import helmet from "helmet";
 import { User } from "./models";
+import { Request } from "express";
+
 
 dotenv.config();
+
+interface MyContext {
+  userId?: number;
+  req: Request;
+}
 
 const app = express();
 
@@ -99,16 +106,8 @@ app.use((req, res, next) => {
 // =====================
 // 6. Apollo Server Setup
 // =====================
-const server = new ApolloServer({
+const server = new ApolloServer<MyContext>({
   schema,
-  introspection: process.env.NODE_ENV !== "production",
-  formatError: (error) => {
-    console.error("GraphQL Error:", error);
-    return {
-      message: error.message,
-      code: error.extensions?.code || "INTERNAL_SERVER_ERROR",
-    };
-  },
 });
 
 // =====================
@@ -135,25 +134,15 @@ const startServer = async () => {
         credentials: true
       }),
       express.json(),
-      expressMiddleware(server, {
-        context: async ({ req, res }) => {
-          console.log("Session Data:", req.session);
-          // Add session verification here
-          if (!req.session.userId) {
-            console.warn('Unauthorized GraphQL access attempt');
-          }
-          return { req, res, user: req.session.userId && await User.findByPk(req.session.userId) };
-        },
-      })as any
-    );
 
-    // Health check endpoint
-    app.get("/health", (_, res) => {
-      res.status(200).json({ 
-        status: "healthy",
-        session: _.session?.userId ? "authenticated" : "anonymous"
-      });
-    });
+      expressMiddleware(server, {
+        context: async ({ req, res }): Promise<any> => {
+          console.log("Session Data:", req.session);
+          const userId = req.session?.userId;
+          return { req, res, userId, user: userId && await User.findByPk(userId) };
+        },
+      }) as any
+     );
 
     // Start server
     const PORT = process.env.PORT || 4000;
