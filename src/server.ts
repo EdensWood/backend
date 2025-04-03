@@ -67,16 +67,15 @@ app.use(
     name: "connect.sid", // Custom session cookie name
     secret: process.env.SESSION_SECRET!,
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: true,
     proxy: true, // Required for proxies (Render, Vercel, etc.)
     rolling: true, // Renew cookie on every request
     cookie: {
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
-      sameSite: "none", // Required for cross-site cookies
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Required for cross-site cookies
       maxAge: 7 * 24 * 60 * 60 * 1000, // 1 week
-      domain: process.env.NODE_ENV === "production" ? "yourdomain.com" : undefined
-    },
+     }, // Adjust based on your domain},
     store: new PGStore({
       pool: pgPool,
       createTableIfMissing: true,
@@ -138,6 +137,7 @@ const startServer = async () => {
       express.json(),
       expressMiddleware(server, {
         context: async ({ req, res }) => {
+          console.log("Session Data:", req.session);
           // Add session verification here
           if (!req.session.userId) {
             console.warn('Unauthorized GraphQL access attempt');
