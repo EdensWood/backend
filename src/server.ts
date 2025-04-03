@@ -2,7 +2,7 @@ import express from "express";
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@apollo/server/express4";
 import session from "express-session";
-import cors, { CorsOptions } from "cors";
+import cors, { CorsOptions, CorsRequest } from "cors";
 import dotenv from "dotenv";
 import schema from "./graphql/schema";
 import sequelize from "./config/database";
@@ -142,7 +142,7 @@ const startServer = async () => {
     // GraphQL endpoint with session debugging
     app.use(
       "/graphql",
-      cors<cors.CorsRequest>({
+      cors({
         origin: allowedOrigins,
         credentials: true
       }),
