@@ -9,8 +9,8 @@
     "forceConsistentCasingInFileNames": true,
     "outDir": "dist",
     "typeRoots": ["./node_modules/@types", "./src/types"],
-    "types": ["node", "express", "jsonwebtoken", "connect-pg-simple", "pg"]
+    "types": ["node", "express", "jsonwebtoken", "connect-pg-simple", "pg", "cors"]
   },
-  "include": ["src/**/*", "src/types/custom.d.ts"],
+  "include": ["src/**/*", "src/types/custom.d.ts", "src/types/cors.d.ts"],
   "exclude": ["node_modules"]
 }
