@@ -39,17 +39,31 @@ const resolvers = {
         });
     
         console.log("Fetched Tasks:", tasks);
+        
     
-        return tasks.map(task => ({
-          id: task.id.toString(),
-          title: task.title ?? "No Title",
-          description: task.description ?? "No Description",
-          status: task.status ?? "UNKNOWN",
-          user: {
-            id: task.user?.id?.toString() ?? "UNKNOWN",
-            name: task.user?.name ?? "No Name"
-          }
-        }));
+         // Debugging: Check task structure
+    tasks.forEach(task => {
+      console.log("Task Data:", task); // Log each task to inspect its structure
+    });
+
+    return tasks.map(task => {
+      // Ensure task.id exists before calling toString
+      if (!task.id) {
+        console.error("Task ID is undefined or null:", task);
+        throw new Error("Task ID is missing");
+      }
+
+      return {
+        id: task.id.toString(),  // Safely call toString
+        title: task.title ?? "No Title",
+        description: task.description ?? "No Description",
+        status: task.status ?? "UNKNOWN",
+        user: {
+          id: task.user?.id?.toString() ?? "UNKNOWN",  // Safe access to task.user
+          name: task.user?.name ?? "No Name",
+        }
+      };
+    });
       } catch (error) {
         console.error("Error fetching tasks:", error);
         throw new Error("Failed to fetch tasks");
