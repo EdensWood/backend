@@ -58,7 +58,7 @@ const pgPool = new Pool({
 // =====================
 const PGStore = (0, connect_pg_simple_1.default)(express_session_1.default);
 app.use((0, express_session_1.default)({
-    name: "taskmanager.sid", // Custom session cookie name
+    name: "connect.sid", // Custom session cookie name
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,

@@ -65,7 +65,7 @@ const PGStore = pgSession(session);
 
 app.use(
   session({
-    name: "taskmanager.sid", // Custom session cookie name
+    name: "connect.sid", // Custom session cookie name
     secret: process.env.SESSION_SECRET!,
     resave: false,
     saveUninitialized: false,
