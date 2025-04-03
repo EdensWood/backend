@@ -26,8 +26,6 @@ app.set("trust proxy", 1); // Required for secure cookies in production
 // =================
 const allowedOrigins = [
   "https://task-manager-frontend-eight-lilac.vercel.app",
-  "https://task-manager-frontend-3qrv87a9k-leafywoods-projects.vercel.app",
-  "http://localhost:3000",
 ];
 
 app.use(
@@ -131,21 +129,20 @@ const startServer = async () => {
     // GraphQL endpoint with session debugging
     app.use(
       "/graphql",
-      cors<cors.CorsRequest>({
-        origin: allowedOrigins,
-        credentials: true
+      cors({
+        origin: allowedOrigins, // Single origin
+        credentials: true, // Must be true for cookies
       }),
       express.json(),
       expressMiddleware(server, {
         context: async ({ req, res }) => {
-          // Add session verification here
-          if (!req.session.userId) {
-            console.warn('Unauthorized GraphQL access attempt');
-          }
-          return { req, res };
+          console.log("Session Debugging:", req.session);
+          const userId = req.session?.userId;
+          return { req, res, user: userId ? { id: userId } : null };
         },
-      })as any
+      }) as any
     );
+    
 
     // Health check endpoint
     app.get("/health", (_, res) => {
