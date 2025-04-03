@@ -27,7 +27,7 @@ app.set("trust proxy", 1); // Required for secure cookies in production
 // =================
 const allowedOrigins = [
     "https://task-manager-frontend-eight-lilac.vercel.app",
-    "https://task-manager-frontend-27y0s2t40-leafywoods-projects.vercel.app",
+    "https://task-manager-frontend-3qrv87a9k-leafywoods-projects.vercel.app",
     "http://localhost:3000",
 ];
 app.use((0, cors_1.default)({
