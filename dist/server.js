@@ -15,6 +15,7 @@ const connect_pg_simple_1 = __importDefault(require("connect-pg-simple"));
 const pg_1 = __importDefault(require("pg"));
 const { Pool } = pg_1.default;
 const helmet_1 = __importDefault(require("helmet"));
+const models_1 = require("./models");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 // =======================
@@ -122,7 +123,7 @@ const startServer = async () => {
                 if (!req.session.userId) {
                     console.warn('Unauthorized GraphQL access attempt');
                 }
-                return { req, res };
+                return { req, res, user: req.session.userId && await models_1.User.findByPk(req.session.userId) };
             },
         }));
         // Health check endpoint

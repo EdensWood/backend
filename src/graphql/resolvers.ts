@@ -6,6 +6,7 @@ import { Request, Response } from "express";
 export interface ContextType {
   req: Request;
   res: Response;
+  user?: User | null;
 }
 // Add this to your types/interfaces (or at the top of resolvers.ts)
 interface JwtPayload {
@@ -20,19 +21,19 @@ const resolvers = {
     },
     tasks: async () => await Task.findAll({ include: [{ model: User, as: "user" }] }),
     // In your resolvers.ts
-    myTasks: async (_: any, __: any, { user }: { user: any }) => {
+    myTasks: async (_: any, __: any, { user }: ContextType) => {
       if (!user) throw new Error("Unauthorized");
-    
+
       try {
         console.log("Fetching tasks for user:", user.id);
-    
+
         const tasks = await Task.findAll({
           where: { userId: user.id },
           include: [{ model: User, as: "user" }]
         });
-    
+
         console.log("Fetched Tasks:", tasks);
-    
+
         return tasks.map(task => ({
           id: task.id.toString(),
           title: task.title ?? "No Title",
@@ -122,7 +123,7 @@ login: async (_: any, { email, password }: any, { req }: ContextType) => {
     const user = await User.findOne({
       where: { email },
       attributes: ["id", "name", "email", "password"],
-      raw: true// Must be false for sessions to work
+      raw: true // Must be false for sessions to work
     });
 
     if (!user) {
@@ -177,8 +178,7 @@ login: async (_: any, { email, password }: any, { req }: ContextType) => {
     throw new Error("Login failed. Please try again.");
   }
 },   
-
-
+    
 logout: async (_: any, __: any, { req, res }: any) => {
         // Clear session/cookie (implementation depends on your auth)
         await new Promise<void>((resolve) => {
@@ -253,7 +253,6 @@ logout: async (_: any, __: any, { req, res }: any) => {
       console.log(`Task with ID ${id} deleted successfully.`);
       return "Task deleted successfully";
     },
-    
     
   },
 };

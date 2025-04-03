@@ -10,6 +10,7 @@ import pgSession from "connect-pg-simple";
 import pg from 'pg';
 const { Pool } = pg;
 import helmet from "helmet";
+import { User } from "./models";
 
 dotenv.config();
 
@@ -95,6 +96,7 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Credentials', 'true');
   next();
 });
+
 // =====================
 // 6. Apollo Server Setup
 // =====================
@@ -140,7 +142,7 @@ const startServer = async () => {
           if (!req.session.userId) {
             console.warn('Unauthorized GraphQL access attempt');
           }
-          return { req, res };
+          return { req, res, user: req.session.userId && await User.findByPk(req.session.userId) };
         },
       })as any
     );
