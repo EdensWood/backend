@@ -8,6 +8,12 @@ export interface ContextType {
   res: Response;
   user?: User | null;
 }
+
+interface CreateTaskInput {
+  title: string;
+  description?: string;
+  status?: "PENDING" | "IN_PROGRESS" | "COMPLETED";
+}
 // Add this to your types/interfaces (or at the top of resolvers.ts)
 interface JwtPayload {
   userId: string | number;
@@ -211,49 +217,36 @@ logout: async (_: any, __: any, { req, res }: any) => {
         });
         return true;
       },
-      createTask: async (
-        _: any,
-        { title, description, status }: { title: string; description?: string; status?: "PENDING" | "IN_PROGRESS" | "COMPLETED" },
-        { req }: ContextType
-      ) => {
-        if (!req.session.userId) {
-          throw new Error("Unauthorized");
-        }
-      
-        try {
-          // Create the task
-          const newTask = await Task.create({
-            title,
-            description: description || "", // Ensure description isn't undefined
-            status: status || "PENDING", // Default status if not provided
-            userId: req.session.userId,
-          });
-      
-          if (!newTask || !newTask.id) {
-            throw new Error("Task creation failed: Missing ID");
+      // In resolvers.ts
+    createTask: async (_: any, { title, description, status }: CreateTaskInput, { req }: ContextType) => {
+      if (!req.session.userId) throw new Error("Unauthorized");
+
+      try {
+        const user = await User.findByPk(req.session.userId);
+        if (!user) throw new Error("User not found");
+
+        const newTask = await Task.create({
+          title,
+          description: description || "",
+          status: status || "PENDING",
+          userId: req.session.userId
+        });
+
+        return {
+          id: newTask.id.toString(),
+          title: newTask.title,
+          description: newTask.description,
+          status: newTask.status,
+          user: {
+            id: user.id.toString(),
+            name: user.name
           }
-      
-          // Convert to plain object
-          const taskData = newTask.get({ plain: true });
-      
-          console.log("New task created:", taskData); // Debugging log
-      
-          // Return in the correct format
-          return {
-            id: taskData.id.toString(),
-            title: taskData.title,
-            description: taskData.description,
-            status: taskData.status,
-            user: {
-              id: req.session.userId.toString(), // Ensuring user data is correctly linked
-              name: "Unknown", // You may want to fetch the user's name
-            },
-          };
-        } catch (error) {
-          console.error("Task creation error:", error);
-          throw new Error("Failed to create task");
-        }
-      },
+        };
+      } catch (error) {
+        console.error("Task creation error:", error);
+        throw new Error("Failed to create task");
+      }
+    },
       
     
     

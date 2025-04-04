@@ -40,7 +40,8 @@ app.set("trust proxy", 1); // Required for secure cookies in production
 // 2. CORS Setup
 // =================
 const allowedOrigins = [
-    "https://task-manager-frontend-7rfhatix3-leafywoods-projects.vercel.app",
+    "https://task-manager-frontend-k3jhg9jzo-leafywoods-projects.vercel.app",
+    "https://task-manager-frontend-eight-lilac.vercel.app",
 ];
 app.use((0, cors_1.default)({
     origin: (origin, callback) => {
@@ -77,9 +78,10 @@ app.use((0, express_session_1.default)({
     proxy: true, // Required for proxies (Render, Vercel, etc.)
     rolling: true, // Renew cookie on every request
     cookie: {
-        secure: process.env.NODE_ENV === "production",
+        secure: true,
         httpOnly: true,
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Required for cross-site cookies
+        sameSite: "none", // Required for cross-site cookies
+        domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined,
         maxAge: 7 * 24 * 60 * 60 * 1000, // 1 week
     }, // Adjust based on your domain},
     store: new PGStore({

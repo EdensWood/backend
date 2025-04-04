@@ -178,34 +178,29 @@ const resolvers = {
             });
             return true;
         },
+        // In resolvers.ts
         createTask: async (_, { title, description, status }, { req }) => {
-            if (!req.session.userId) {
+            if (!req.session.userId)
                 throw new Error("Unauthorized");
-            }
             try {
-                // Create the task
+                const user = await models_1.User.findByPk(req.session.userId);
+                if (!user)
+                    throw new Error("User not found");
                 const newTask = await models_1.Task.create({
                     title,
-                    description: description || "", // Ensure description isn't undefined
-                    status: status || "PENDING", // Default status if not provided
-                    userId: req.session.userId,
+                    description: description || "",
+                    status: status || "PENDING",
+                    userId: req.session.userId
                 });
-                if (!newTask || !newTask.id) {
-                    throw new Error("Task creation failed: Missing ID");
-                }
-                // Convert to plain object
-                const taskData = newTask.get({ plain: true });
-                console.log("New task created:", taskData); // Debugging log
-                // Return in the correct format
                 return {
-                    id: taskData.id.toString(),
-                    title: taskData.title,
-                    description: taskData.description,
-                    status: taskData.status,
+                    id: newTask.id.toString(),
+                    title: newTask.title,
+                    description: newTask.description,
+                    status: newTask.status,
                     user: {
-                        id: req.session.userId.toString(), // Ensuring user data is correctly linked
-                        name: "Unknown", // You may want to fetch the user's name
-                    },
+                        id: user.id.toString(),
+                        name: user.name
+                    }
                 };
             }
             catch (error) {
