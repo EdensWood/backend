@@ -1,13 +1,9 @@
 import bcrypt from "bcryptjs";
 import jwt from 'jsonwebtoken';
 import { User, Task } from "../models";
-import { Request, Response } from "express";
+import { MyContext } from "../types/context";
 
-export interface ContextType {
-  req: Request;
-  res: Response;
-  user?: User | null;
-}
+
 // Add this to your types/interfaces (or at the top of resolvers.ts)
 interface JwtPayload {
   userId: string | number;
@@ -15,13 +11,13 @@ interface JwtPayload {
 
 const resolvers = {
   Query: {
-    users: async (_: any, __: any, { req }: ContextType) => {
+    users: async (_: any, __: any, { req }: MyContext) => {
       if (!req.session.userId) throw new Error("Unauthorized");
       return await User.findAll();
     },
     tasks: async () => await Task.findAll({ include: [{ model: User, as: "user" }] }),
     // In your resolvers.ts
-    myTasks: async (_: any, __: any, { req }: ContextType) => {
+    myTasks: async (_: any, __: any, { req }: MyContext) => {
       try {
         console.log("Session data in myTasks resolver:", req.session);
     
@@ -59,7 +55,7 @@ const resolvers = {
     
     
     // In your me resolver
-    me: async (_: any, __: any, { req }: ContextType) => {
+    me: async (_: any, __: any, { req }: MyContext) => {
       if (req.session.userId) {
         // Session-based auth
         return await User.findByPk(req.session.userId, { attributes: ["id", "name", "email"] });
@@ -123,7 +119,7 @@ register: async (_: any, { name, email, password }: any) => {
   }
 },  
     
-login: async (_: any, { email, password }: any, { req }: ContextType) => {
+login: async (_: any, { email, password }: any, { req }: MyContext) => {
   try {
     console.log(`Login attempt for email: ${email}`);
 
@@ -154,7 +150,7 @@ login: async (_: any, { email, password }: any, { req }: ContextType) => {
     // 3. Create session (CRITICAL FIX)
     req.session.userId = user.id;
     await new Promise<void>((resolve, reject) => {
-      req.session.save(err => {
+      req.session.save((err: any) => {
         if (err) {
           console.error("Session save error:", err);
           reject(err);
@@ -198,7 +194,7 @@ logout: async (_: any, __: any, { req, res }: any) => {
         });
         return true;
       },
-    createTask: async (_: any, { title, description, status }: any, { req }: ContextType) => {
+    createTask: async (_: any, { title, description, status }: any, { req }: MyContext) => {
       if (!req.session.userId) throw new Error("Unauthorized");
     
       try {
@@ -228,7 +224,7 @@ logout: async (_: any, __: any, { req, res }: any) => {
     },
     
     
-    updateTask: async (_: any, { id, title, description, status }: any, { req }: ContextType) => {
+    updateTask: async (_: any, { id, title, description, status }: any, { req }: MyContext) => {
       console.log("Session User ID:", req.session.userId);
       if (!req.session.userId) throw new Error("Unauthorized");
     
@@ -246,7 +242,7 @@ logout: async (_: any, __: any, { req, res }: any) => {
     },
     
     
-    deleteTask: async (_: any, { id }: any, { req }: ContextType) => {
+    deleteTask: async (_: any, { id }: any, { req }: MyContext) => {
       console.log("Session User ID:", req.session.userId);
       if (!req.session.userId) throw new Error("Unauthorized");
     

@@ -128,7 +128,7 @@ const resolvers = {
                 // 3. Create session (CRITICAL FIX)
                 req.session.userId = user.id;
                 await new Promise((resolve, reject) => {
-                    req.session.save(err => {
+                    req.session.save((err) => {
                         if (err) {
                             console.error("Session save error:", err);
                             reject(err);

@@ -44,8 +44,12 @@ const allowedOrigins = [
     "https://task-manager-frontend-eight-lilac.vercel.app"
 ];
 app.use((0, cors_1.default)({
-    origin: (origin, callback) => {
-        if (!origin || allowedOrigins.some(allowed => origin.startsWith(allowed))) {
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin)
+            return callback(null, true);
+        if (allowedOrigins.indexOf(origin) !== -1 ||
+            allowedOrigins.some(allowed => origin.startsWith(allowed))) {
             return callback(null, true);
         }
         console.warn(`🚫 CORS blocked: ${origin}`);
@@ -70,24 +74,26 @@ const pgPool = new Pool({
 // 4. Session Setup
 // =====================
 const PGStore = (0, connect_pg_simple_1.default)(express_session_1.default);
+// Update your session configuration
 app.use((0, express_session_1.default)({
-    name: "connect.sid", // Custom session cookie name
+    name: "taskmanager.sid",
     secret: process.env.SESSION_SECRET,
     resave: false,
-    saveUninitialized: true,
-    proxy: true, // Required for proxies (Render, Vercel, etc.)
-    rolling: true, // Renew cookie on every request
+    saveUninitialized: false, // Changed to false for security
+    proxy: true,
+    rolling: true,
     cookie: {
         secure: process.env.NODE_ENV === "production",
         httpOnly: true,
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Required for cross-site cookies
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 1 week
-    }, // Adjust based on your domain},
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        maxAge: 24 * 60 * 60 * 1000, // 1 day (reduced from 1 week)
+        domain: process.env.NODE_ENV === "production" ? ".yourdomain.com" : undefined // Set your domain
+    },
     store: new PGStore({
         pool: pgPool,
         createTableIfMissing: true,
         tableName: "user_sessions",
-        pruneSessionInterval: 60 // Cleanup expired sessions every 60 minutes
+        pruneSessionInterval: 60
     })
 }));
 // =====================
@@ -124,10 +130,25 @@ const startServer = async () => {
             credentials: true
         }), express_1.default.json(), (0, express4_1.expressMiddleware)(server, {
             context: async ({ req, res }) => {
-                console.log("Session Data:", req.session);
-                const userId = req.session?.userId;
-                return { req, res, userId, user: userId && await models_1.User.findByPk(userId) };
-            },
+                // Type assertions here
+                const customReq = req;
+                const customRes = res;
+                let user = null;
+                if (customReq.session.userId) {
+                    user = await models_1.User.findByPk(customReq.session.userId);
+                    if (!user) {
+                        await new Promise((resolve) => {
+                            customReq.session.destroy(() => resolve());
+                        });
+                    }
+                }
+                return {
+                    req: customReq,
+                    res: customRes,
+                    userId: customReq.session.userId,
+                    user
+                };
+            }
         }));
         // Start server
         const PORT = process.env.PORT || 4000;

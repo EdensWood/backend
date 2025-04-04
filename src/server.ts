@@ -11,15 +11,19 @@ import pg from 'pg';
 const { Pool } = pg;
 import helmet from "helmet";
 import { User } from "./models";
-import { Request } from "express";
-
+import { Request,Response } from "express";
+import { CustomRequest, CustomResponse, MyContext } from "./types/context";
 
 dotenv.config();
 
-interface MyContext {
+
+
+type ApolloContext = {
+  req: Partial<Request> & { session: any };
+  res: Partial<Response>;
   userId?: number;
-  req: Request;
-}
+  user?: User | null;
+};
 
 const app = express();
 
@@ -52,10 +56,15 @@ const allowedOrigins = [
 
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.some(allowed => origin.startsWith(allowed))) {
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.indexOf(origin) !== -1 || 
+          allowedOrigins.some(allowed => origin.startsWith(allowed))) {
         return callback(null, true);
       }
+      
       console.warn(`🚫 CORS blocked: ${origin}`);
       return callback(new Error("Not allowed by CORS"), false);
     },
@@ -83,29 +92,30 @@ const pgPool = new Pool({
 // =====================
 const PGStore = pgSession(session);
 
+// Update your session configuration
 app.use(
   session({
-    name: "connect.sid", // Custom session cookie name
+    name: "taskmanager.sid",
     secret: process.env.SESSION_SECRET!,
     resave: false,
-    saveUninitialized: true,
-    proxy: true, // Required for proxies (Render, Vercel, etc.)
-    rolling: true, // Renew cookie on every request
+    saveUninitialized: false, // Changed to false for security
+    proxy: true,
+    rolling: true,
     cookie: {
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Required for cross-site cookies
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 1 week
-     }, // Adjust based on your domain},
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 24 * 60 * 60 * 1000, // 1 day (reduced from 1 week)
+      domain: process.env.NODE_ENV === "production" ? ".yourdomain.com" : undefined // Set your domain
+    },
     store: new PGStore({
       pool: pgPool,
       createTableIfMissing: true,
       tableName: "user_sessions",
-      pruneSessionInterval: 60 // Cleanup expired sessions every 60 minutes
+      pruneSessionInterval: 60
     })
   })
 );
-
 // =====================
 // 5. Body Parsers
 // =====================
@@ -148,15 +158,31 @@ const startServer = async () => {
         credentials: true
       }),
       express.json(),
-
       expressMiddleware(server, {
-        context: async ({ req, res }): Promise<any> => {
-          console.log("Session Data:", req.session);
-          const userId = req.session?.userId;
-          return { req, res, userId, user: userId && await User.findByPk(userId) };
-        },
+        context: async ({ req, res }): Promise<MyContext> => {
+          // Type assertions here
+          const customReq = req as unknown as CustomRequest;
+          const customRes = res as unknown as CustomResponse;
+          
+          let user = null;
+          if (customReq.session.userId) {
+            user = await User.findByPk(customReq.session.userId);
+            if (!user) {
+              await new Promise<void>((resolve) => {
+                customReq.session.destroy(() => resolve());
+              });
+            }
+          }
+          
+          return {
+            req: customReq,
+            res: customRes,
+            userId: customReq.session.userId,
+            user
+          };
+        }
       }) as any
-     );
+    );
 
     // Start server
     const PORT = process.env.PORT || 4000;
