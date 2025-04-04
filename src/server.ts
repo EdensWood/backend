@@ -29,7 +29,7 @@ app.set("trust proxy", 1);
 // =================
 const allowedOrigins = [
   "https://task-manager-frontend-eight-lilac.vercel.app",
-  "https://task-manager-frontend-gkhoexaa1-leafywoods-projects.vercel.app",
+  "https://task-manager-frontend-72dxlq3nz-leafywoods-projects.vercel.app",
   "http://localhost:3000"
 ];
 
@@ -76,20 +76,28 @@ app.use(
     proxy: true,
     rolling: true,
     cookie: {
-      secure: process.env.NODE_ENV === "production",
+      secure: true, // Always true in production
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      sameSite: 'none',
       maxAge: 24 * 60 * 60 * 1000,
-      domain: process.env.NODE_ENV === "production" ? ".vercel.app" : undefined
+      // Remove domain completely for Vercel
+      domain: undefined // Critical change!
     },
     store: new PGStore({
       pool: pgPool,
       createTableIfMissing: true,
-      tableName: "user_sessions",
-      pruneSessionInterval: 60
+      tableName: "user_sessions"
     })
   })
 );
+
+// Add this right after app.use(session(...))
+app.use((req, res, next) => {
+  console.log('Session middleware - req.session:', req.session);
+  console.log('Session ID:', req.sessionID);
+  console.log('Cookies:', req.headers.cookie);
+  next();
+});
 
 // =====================
 // 5. Body Parsers
