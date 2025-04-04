@@ -46,7 +46,7 @@ app.set("trust proxy", 1); // Required for secure cookies in production
 // 2. CORS Setup
 // =================
 const allowedOrigins = [
-  "https://task-manager-frontend-2nbdwrsbd-leafywoods-projects.vercel.app",
+  "https://task-manager-frontend-hltkk4e8m-leafywoods-projects.vercel.app",
   "https://task-manager-frontend-eight-lilac.vercel.app",
 ];
 
@@ -61,12 +61,18 @@ app.use(
     },
     credentials: true,
     methods: ["GET", "POST", "OPTIONS", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    allowedHeaders: ['Content-Type', 
+    'Authorization',
+    'X-Requested-With',
+    'Accept'],
     exposedHeaders: ["set-cookie"],
   })
 );
 
-app.options("*", cors()); // Handle preflight globally
+app.options('*', cors({
+  origin: allowedOrigins,
+  credentials: true
+})); // Handle preflight globally
 
 // ======================
 // 3. Database Connection
