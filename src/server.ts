@@ -13,6 +13,7 @@ import helmet from "helmet";
 import { User } from "./models";
 import { Request, Response } from "express";
 import { CustomRequest, CustomResponse, MyContext } from "./types/context";
+import { setupAssociations } from "./models/associations";
 
 dotenv.config();
 
@@ -130,12 +131,17 @@ const server = new ApolloServer<MyContext>({
 // 7. Server Startup
 // =====================
 const startServer = async () => {
+  setupAssociations();
   try {
     await sequelize.authenticate();
     console.log("✅ Database connected");
     
     await sequelize.sync({ alter: true });
     console.log("✅ Database synchronized");
+
+    console.log("Syncing database...");
+    await sequelize.sync({ force: true });
+    console.log("Database re-synced!");
 
     await server.start();
 
@@ -181,6 +187,7 @@ const startServer = async () => {
     process.exit(1);
   }
 };
+
 
 startServer();
 

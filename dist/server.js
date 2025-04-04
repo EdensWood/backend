@@ -16,6 +16,7 @@ const pg_1 = __importDefault(require("pg"));
 const { Pool } = pg_1.default;
 const helmet_1 = __importDefault(require("helmet"));
 const models_1 = require("./models");
+const associations_1 = require("./models/associations");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 // =======================
@@ -119,11 +120,15 @@ const server = new server_1.ApolloServer({
 // 7. Server Startup
 // =====================
 const startServer = async () => {
+    (0, associations_1.setupAssociations)();
     try {
         await database_1.default.authenticate();
         console.log("✅ Database connected");
         await database_1.default.sync({ alter: true });
         console.log("✅ Database synchronized");
+        console.log("Syncing database...");
+        await database_1.default.sync({ force: true });
+        console.log("Database re-synced!");
         await server.start();
         app.use("/graphql", express_1.default.json(), (0, express4_1.expressMiddleware)(server, {
             context: async ({ req, res }) => {
