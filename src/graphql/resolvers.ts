@@ -8,12 +8,6 @@ export interface ContextType {
   res: Response;
   user?: User | null;
 }
-
-interface CreateTaskInput {
-  title: string;
-  description?: string;
-  status?: "PENDING" | "IN_PROGRESS" | "COMPLETED";
-}
 // Add this to your types/interfaces (or at the top of resolvers.ts)
 interface JwtPayload {
   userId: string | number;
@@ -47,29 +41,16 @@ const resolvers = {
         console.log("Fetched Tasks:", tasks);
         
     
-         // Debugging: Check task structure
-    tasks.forEach(task => {
-      console.log("Task Data:", task); // Log each task to inspect its structure
-    });
-
-    return tasks.map(task => {
-      // Ensure task.id exists before calling toString
-      if (!task.id) {
-        console.error("Task ID is undefined or null:", task);
-        return { id: "UNKNOWN", title: "No Title", description: "No Description", status: "UNKNOWN", user: { id: "UNKNOWN", name: "No Name" } };
-      }
-
-      return {
-        id: task.id.toString(),  // Safely call toString
-        title: task.title ?? "No Title",
-        description: task.description ?? "No Description",
-        status: task.status ?? "UNKNOWN",
-        user: {
-          id: task.user?.id?.toString() ?? "UNKNOWN",  // Safe access to task.user
-          name: task.user?.name ?? "No Name",
-        }
-      };
-    });
+        return tasks.map(task => ({
+          id: task.id.toString(),
+          title: task.title ?? "No Title",
+          description: task.description ?? "No Description",
+          status: task.status ?? "UNKNOWN",
+          user: {
+            id: task.user?.id?.toString() ?? "UNKNOWN",
+            name: task.user?.name ?? "No Name"
+          }
+        }));
       } catch (error) {
         console.error("Error fetching tasks:", error);
         throw new Error("Failed to fetch tasks");
@@ -142,43 +123,70 @@ register: async (_: any, { name, email, password }: any) => {
   }
 },  
     
-// In your resolvers.ts
 login: async (_: any, { email, password }: any, { req }: ContextType) => {
   try {
-    const user = await User.findOne({ where: { email } });
-    if (!user) throw new Error("User not found");
+    console.log(`Login attempt for email: ${email}`);
 
-    const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) throw new Error("Invalid credentials");
+    // 1. Find user
+    const user = await User.findOne({
+      where: { email },
+      attributes: ["id", "name", "email", "password"],
+      raw: true // Must be false for sessions to work
+    });
 
-    // Set session
+    if (!user) {
+      console.error("User not found");
+      throw new Error("Invalid credentials");
+    }
+
+    // Additional logging to debug
+    console.log(`Retrieved user: ${JSON.stringify(user)}`);
+    console.log(`Plain text password: ${password}`);
+    console.log(`Hashed password: ${user.password}`);
+
+    // 2. Compare passwords
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
+      console.error("Password mismatch");
+      throw new Error("Invalid credentials");
+    }
+
+    // 3. Create session (CRITICAL FIX)
     req.session.userId = user.id;
-    
     await new Promise<void>((resolve, reject) => {
       req.session.save(err => {
-        if (err) reject(err);
-        resolve();
+        if (err) {
+          console.error("Session save error:", err);
+          reject(err);
+        } else {
+          console.log("Session saved successfully:", req.sessionID);
+            console.log("Session after login:", req.session);
+          resolve();
+        }
       });
     });
+
+    // 4. Generate token (optional if using sessions)
+    const token = jwt.sign(
+      { userId: user.id },
+      process.env.JWT_SECRET || "fallback_secret",
+      { expiresIn: "1h" }
+    );
 
     return {
       user: {
         id: user.id.toString(),
         name: user.name,
-        email: user.email
+        email: user.email,
       },
-      token: jwt.sign(
-        { userId: user.id },
-        process.env.JWT_SECRET || "fallback_secret",
-        { expiresIn: "1h" }
-      ),
-      message: "Login successful"
+      token,
+      message: "Login successful",
     };
   } catch (error) {
     console.error("Login error:", error);
-    throw new Error(error instanceof Error ? error.message : "Login failed");
+    throw new Error("Login failed. Please try again.");
   }
-},  
+},   
     
 logout: async (_: any, __: any, { req, res }: any) => {
         // Clear session/cookie (implementation depends on your auth)
@@ -190,37 +198,34 @@ logout: async (_: any, __: any, { req, res }: any) => {
         });
         return true;
       },
-      // In resolvers.ts
-    createTask: async (_: any, { title, description, status }: CreateTaskInput, { req }: ContextType) => {
+    createTask: async (_: any, { title, description, status }: any, { req }: ContextType) => {
       if (!req.session.userId) throw new Error("Unauthorized");
-
+    
       try {
-        const user = await User.findByPk(req.session.userId);
-        if (!user) throw new Error("User not found");
-
+        // Create the task
         const newTask = await Task.create({
           title,
-          description: description || "",
-          status: status || "PENDING",
+          description,
+          status,
           userId: req.session.userId
         });
-
+    
+        // Convert to plain object and ensure ID is included
+        const taskData = newTask.get({ plain: true });
+    
+        // Return in correct format
         return {
-          id: newTask.id.toString(),
-          title: newTask.title,
-          description: newTask.description,
-          status: newTask.status,
-          user: {
-            id: user.id.toString(),
-            name: user.name
-          }
+          id: taskData.id.toString(), // Convert to string if using GraphQL ID type
+          title: taskData.title,
+          description: taskData.description,
+          status: taskData.status,
+          userId: taskData.userId
         };
       } catch (error) {
         console.error("Task creation error:", error);
         throw new Error("Failed to create task");
       }
     },
-      
     
     
     updateTask: async (_: any, { id, title, description, status }: any, { req }: ContextType) => {

@@ -29,27 +29,16 @@ const resolvers = {
                     raw: false
                 });
                 console.log("Fetched Tasks:", tasks);
-                // Debugging: Check task structure
-                tasks.forEach(task => {
-                    console.log("Task Data:", task); // Log each task to inspect its structure
-                });
-                return tasks.map(task => {
-                    // Ensure task.id exists before calling toString
-                    if (!task.id) {
-                        console.error("Task ID is undefined or null:", task);
-                        return { id: "UNKNOWN", title: "No Title", description: "No Description", status: "UNKNOWN", user: { id: "UNKNOWN", name: "No Name" } };
+                return tasks.map(task => ({
+                    id: task.id.toString(),
+                    title: task.title ?? "No Title",
+                    description: task.description ?? "No Description",
+                    status: task.status ?? "UNKNOWN",
+                    user: {
+                        id: task.user?.id?.toString() ?? "UNKNOWN",
+                        name: task.user?.name ?? "No Name"
                     }
-                    return {
-                        id: task.id.toString(), // Safely call toString
-                        title: task.title ?? "No Title",
-                        description: task.description ?? "No Description",
-                        status: task.status ?? "UNKNOWN",
-                        user: {
-                            id: task.user?.id?.toString() ?? "UNKNOWN", // Safe access to task.user
-                            name: task.user?.name ?? "No Name",
-                        }
-                    };
-                });
+                }));
             }
             catch (error) {
                 console.error("Error fetching tasks:", error);
@@ -113,37 +102,59 @@ const resolvers = {
                 }
             }
         },
-        // In your resolvers.ts
         login: async (_, { email, password }, { req }) => {
             try {
-                const user = await models_1.User.findOne({ where: { email } });
-                if (!user)
-                    throw new Error("User not found");
-                const validPassword = await bcryptjs_1.default.compare(password, user.password);
-                if (!validPassword)
+                console.log(`Login attempt for email: ${email}`);
+                // 1. Find user
+                const user = await models_1.User.findOne({
+                    where: { email },
+                    attributes: ["id", "name", "email", "password"],
+                    raw: true // Must be false for sessions to work
+                });
+                if (!user) {
+                    console.error("User not found");
                     throw new Error("Invalid credentials");
-                // Set session
+                }
+                // Additional logging to debug
+                console.log(`Retrieved user: ${JSON.stringify(user)}`);
+                console.log(`Plain text password: ${password}`);
+                console.log(`Hashed password: ${user.password}`);
+                // 2. Compare passwords
+                const passwordMatch = await bcryptjs_1.default.compare(password, user.password);
+                if (!passwordMatch) {
+                    console.error("Password mismatch");
+                    throw new Error("Invalid credentials");
+                }
+                // 3. Create session (CRITICAL FIX)
                 req.session.userId = user.id;
                 await new Promise((resolve, reject) => {
                     req.session.save(err => {
-                        if (err)
+                        if (err) {
+                            console.error("Session save error:", err);
                             reject(err);
-                        resolve();
+                        }
+                        else {
+                            console.log("Session saved successfully:", req.sessionID);
+                            console.log("Session after login:", req.session);
+                            resolve();
+                        }
                     });
                 });
+                // 4. Generate token (optional if using sessions)
+                const token = jsonwebtoken_1.default.sign({ userId: user.id }, process.env.JWT_SECRET || "fallback_secret", { expiresIn: "1h" });
                 return {
                     user: {
                         id: user.id.toString(),
                         name: user.name,
-                        email: user.email
+                        email: user.email,
                     },
-                    token: jsonwebtoken_1.default.sign({ userId: user.id }, process.env.JWT_SECRET || "fallback_secret", { expiresIn: "1h" }),
-                    message: "Login successful"
+                    token,
+                    message: "Login successful",
                 };
             }
             catch (error) {
                 console.error("Login error:", error);
-                throw new Error(error instanceof Error ? error.message : "Login failed");
+                throw new Error("Login failed. Please try again.");
             }
         },
         logout: async (_, __, { req, res }) => {
@@ -156,29 +167,26 @@ const resolvers = {
             });
             return true;
         },
-        // In resolvers.ts
         createTask: async (_, { title, description, status }, { req }) => {
             if (!req.session.userId)
                 throw new Error("Unauthorized");
             try {
-                const user = await models_1.User.findByPk(req.session.userId);
-                if (!user)
-                    throw new Error("User not found");
+                // Create the task
                 const newTask = await models_1.Task.create({
                     title,
-                    description: description || "",
-                    status: status || "PENDING",
+                    description,
+                    status,
                     userId: req.session.userId
                 });
+                // Convert to plain object and ensure ID is included
+                const taskData = newTask.get({ plain: true });
+                // Return in correct format
                 return {
-                    id: newTask.id.toString(),
-                    title: newTask.title,
-                    description: newTask.description,
-                    status: newTask.status,
-                    user: {
-                        id: user.id.toString(),
-                        name: user.name
-                    }
+                    id: taskData.id.toString(), // Convert to string if using GraphQL ID type
+                    title: taskData.title,
+                    description: taskData.description,
+                    status: taskData.status,
+                    userId: taskData.userId
                 };
             }
             catch (error) {
