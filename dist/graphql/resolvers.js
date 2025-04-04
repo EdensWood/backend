@@ -35,10 +35,10 @@ const resolvers = {
                 });
                 console.log("Fetched Tasks:", JSON.stringify(tasks, null, 2));
                 return tasks.map(task => ({
-                    id: task.id?.toString() ?? "UNKNOWN",
-                    title: task.title ?? "No Title",
-                    description: task.description ?? "No Description",
-                    status: task.status ?? "UNKNOWN",
+                    id: task.dataValues.id?.toString() ?? "UNKNOWN",
+                    title: task.dataValues.title ?? "No Title",
+                    description: task.dataValues.description ?? "No Description",
+                    status: task.dataValues.status ?? "UNKNOWN",
                     user: task.user ? {
                         id: task.user.id?.toString() ?? "UNKNOWN",
                         name: task.user.name ?? "No Name"
