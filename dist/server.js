@@ -126,9 +126,6 @@ const startServer = async () => {
         console.log("✅ Database connected");
         await database_1.default.sync({ alter: true });
         console.log("✅ Database synchronized");
-        console.log("Syncing database...");
-        await database_1.default.sync({ force: true });
-        console.log("Database re-synced!");
         await server.start();
         app.use("/graphql", express_1.default.json(), (0, express4_1.expressMiddleware)(server, {
             context: async ({ req, res }) => {

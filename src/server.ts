@@ -139,9 +139,6 @@ const startServer = async () => {
     await sequelize.sync({ alter: true });
     console.log("✅ Database synchronized");
 
-    console.log("Syncing database...");
-    await sequelize.sync({ force: true });
-    console.log("Database re-synced!");
 
     await server.start();
 
