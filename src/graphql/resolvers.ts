@@ -36,8 +36,7 @@ const resolvers = {
               as: "user", // ✅ Matches fixed association
             },
           ],
-          raw: false, // ✅ Ensure nested data is included
-          nest: true, // ✅ Ensure Sequelize nests results properly
+          // ✅ Ensure Sequelize nests results properly
         });
     
         console.log("Fetched Tasks:", JSON.stringify(tasks, null, 2));
