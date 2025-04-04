@@ -90,6 +90,12 @@ app.use(
     })
   })
 );
+app.use((req, res, next) => {
+  console.log('Session middleware - req.session:', req.session);
+  console.log('Session ID:', req.sessionID);
+  console.log('Cookies:', req.headers.cookie);
+  next();
+});
 
 // =====================
 // 5. Body Parsers
