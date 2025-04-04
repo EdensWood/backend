@@ -224,13 +224,13 @@ const resolvers = {
             if (!req.session.userId)
                 throw new Error("Unauthorized");
             console.log("Task ID received for deletion:", id);
-            const task = await models_1.Task.findByPk(Number(id), { raw: true });
+            const task = await models_1.Task.findByPk(Number(id)); // 🔥 Fix here
             console.log("Fetched Task:", task);
             if (!task)
                 throw new Error("Task not found");
             if (task.userId !== req.session.userId)
                 throw new Error("Unauthorized access to task");
-            await models_1.Task.destroy({ where: { id } });
+            await models_1.Task.destroy({ where: { id: Number(id), userId: req.session.userId } });
             console.log(`Task with ID ${id} deleted successfully.`);
             return "Task deleted successfully";
         },
