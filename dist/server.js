@@ -56,12 +56,19 @@ app.use((0, cors_1.default)({
     allowedHeaders: ['Content-Type',
         'Authorization',
         'X-Requested-With',
-        'Accept'],
+        'credentials'],
     exposedHeaders: ["set-cookie"],
 }));
 app.options('*', (0, cors_1.default)({
     origin: allowedOrigins,
-    credentials: true
+    credentials: true,
+    allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'Accept',
+        'X-Requested-With',
+        'credentials'
+    ]
 })); // Handle preflight globally
 // ======================
 // 3. Database Connection
@@ -77,10 +84,10 @@ const pgPool = new Pool({
 // =====================
 const PGStore = (0, connect_pg_simple_1.default)(express_session_1.default);
 app.use((0, express_session_1.default)({
-    name: "connect.sid", // Custom session cookie name
+    name: "taskmanager.sid", // Custom session cookie name
     secret: process.env.SESSION_SECRET,
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
     proxy: true, // Required for proxies (Render, Vercel, etc.)
     rolling: true, // Renew cookie on every request
     cookie: {

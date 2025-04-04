@@ -64,15 +64,22 @@ app.use(
     allowedHeaders: ['Content-Type', 
     'Authorization',
     'X-Requested-With',
-    'Accept'],
+    'credentials'],
     exposedHeaders: ["set-cookie"],
   })
 );
 
 app.options('*', cors({
   origin: allowedOrigins,
-  credentials: true
-})); // Handle preflight globally
+  credentials: true,
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'Accept',
+    'X-Requested-With',
+    'credentials'
+  ]
+}));// Handle preflight globally
 
 // ======================
 // 3. Database Connection
@@ -91,10 +98,10 @@ const PGStore = pgSession(session);
 
 app.use(
   session({
-    name: "connect.sid", // Custom session cookie name
+    name: "taskmanager.sid", // Custom session cookie name
     secret: process.env.SESSION_SECRET!,
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
     proxy: true, // Required for proxies (Render, Vercel, etc.)
     rolling: true, // Renew cookie on every request
     cookie: {
