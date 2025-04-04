@@ -25,13 +25,13 @@ const resolvers = {
                 console.log("Fetching tasks for user:", req.session.userId);
                 const tasks = await models_1.Task.findAll({
                     where: { userId: req.session.userId },
-                    include: [
-                        {
-                            model: models_1.User,
-                            as: "user", // ✅ Matches fixed association
-                            attributes: ["id", "name"], // ✅ Fetch only necessary fields
-                        },
-                    ],
+                    // include: [
+                    //   {
+                    //     model: User,
+                    //     as: "user", // ✅ Matches fixed association
+                    //     attributes: ["id", "name"], // ✅ Fetch only necessary fields
+                    //   },
+                    // ],
                     raw: false, // ✅ Ensure nested data is included
                     nest: true, // ✅ Ensure Sequelize nests results properly
                 });

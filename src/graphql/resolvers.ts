@@ -30,13 +30,13 @@ const resolvers = {
     
         const tasks = await Task.findAll({
           where: { userId: req.session.userId },
-          include: [
-            {
-              model: User,
-              as: "user", // ✅ Matches fixed association
-              attributes: ["id", "name"], // ✅ Fetch only necessary fields
-            },
-          ],
+          // include: [
+          //   {
+          //     model: User,
+          //     as: "user", // ✅ Matches fixed association
+          //     attributes: ["id", "name"], // ✅ Fetch only necessary fields
+          //   },
+          // ],
           raw: false, // ✅ Ensure nested data is included
           nest: true, // ✅ Ensure Sequelize nests results properly
         });
@@ -197,7 +197,7 @@ login: async (_: any, { email, password }: any, { req }: MyContext) => {
   }
 },   
     
-logout: async (_: any, __: any, { req, res }: any) => {
+    logout: async (_: any, __: any, { req, res }: any) => {
         // Clear session/cookie (implementation depends on your auth)
         await new Promise<void>((resolve) => {
           req.session.destroy((err: any) => {
