@@ -18,76 +18,63 @@ const helmet_1 = __importDefault(require("helmet"));
 const models_1 = require("./models");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
-const corsOptions = {
-    origin: (origin, callback) => {
-        // Allow specific origins or all origins
-        if (origin && origin === 'https://your-allowed-origin.com') {
-            callback(null, true); // Allow the origin
-        }
-        else {
-            callback(new Error('Not allowed by CORS')); // Reject the origin
-        }
-    },
-    credentials: true, // Allow credentials (cookies, authorization headers)
-    optionsSuccessStatus: 200, // Handle preflight requests correctly
-};
 // =======================
 // 1. Security Middlewares
 // =======================
 app.use((0, helmet_1.default)());
-app.set("trust proxy", 1); // Required for secure cookies in production
+app.set("trust proxy", 1);
 // =================
 // 2. CORS Setup
 // =================
 const allowedOrigins = [
+    "https://task-manager-frontend-eight-lilac.vercel.app",
     "https://task-manager-frontend-gkhoexaa1-leafywoods-projects.vercel.app",
-    "https://task-manager-frontend-eight-lilac.vercel.app"
+    "http://localhost:3000"
 ];
-app.use((0, cors_1.default)({
-    origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin)
-            return callback(null, true);
-        if (allowedOrigins.indexOf(origin) !== -1 ||
-            allowedOrigins.some(allowed => origin.startsWith(allowed))) {
-            return callback(null, true);
+const corsOptions = {
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+            callback(null, true);
         }
-        console.warn(`🚫 CORS blocked: ${origin}`);
-        return callback(new Error("Not allowed by CORS"), false);
+        else {
+            console.warn(`🚫 CORS blocked: ${origin}`);
+            callback(new Error('Not allowed by CORS'));
+        }
     },
     credentials: true,
     methods: ["GET", "POST", "OPTIONS", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
     exposedHeaders: ["set-cookie"],
-}));
-app.options("*", (0, cors_1.default)()); // Handle preflight globally
+    optionsSuccessStatus: 200
+};
+app.use((0, cors_1.default)(corsOptions));
+app.options("*", (0, cors_1.default)(corsOptions));
 // ======================
 // 3. Database Connection
 // ======================
 const pgPool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === "production" ? {
-        rejectUnauthorized: false // Required for Render/Heroku
+        rejectUnauthorized: false
     } : false
 });
 // =====================
 // 4. Session Setup
 // =====================
 const PGStore = (0, connect_pg_simple_1.default)(express_session_1.default);
-// Update your session configuration
 app.use((0, express_session_1.default)({
     name: "taskmanager.sid",
     secret: process.env.SESSION_SECRET,
     resave: false,
-    saveUninitialized: false, // Changed to false for security
+    saveUninitialized: false,
     proxy: true,
     rolling: true,
     cookie: {
         secure: process.env.NODE_ENV === "production",
         httpOnly: true,
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        maxAge: 24 * 60 * 60 * 1000, // 1 day (reduced from 1 week)
-        domain: process.env.NODE_ENV === "production" ? ".yourdomain.com" : undefined // Set your domain
+        maxAge: 24 * 60 * 60 * 1000,
+        domain: process.env.NODE_ENV === "production" ? ".vercel.app" : undefined
     },
     store: new PGStore({
         pool: pgPool,
@@ -116,21 +103,13 @@ const server = new server_1.ApolloServer({
 // =====================
 const startServer = async () => {
     try {
-        // Database connection
         await database_1.default.authenticate();
         console.log("✅ Database connected");
-        // Sync models
         await database_1.default.sync({ alter: true });
         console.log("✅ Database synchronized");
-        // Start Apollo Server
         await server.start();
-        // GraphQL endpoint with session debugging
-        app.use("/graphql", (0, cors_1.default)({
-            origin: allowedOrigins,
-            credentials: true
-        }), express_1.default.json(), (0, express4_1.expressMiddleware)(server, {
+        app.use("/graphql", express_1.default.json(), (0, express4_1.expressMiddleware)(server, {
             context: async ({ req, res }) => {
-                // Type assertions here
                 const customReq = req;
                 const customRes = res;
                 let user = null;
@@ -150,7 +129,6 @@ const startServer = async () => {
                 };
             }
         }));
-        // Start server
         const PORT = process.env.PORT || 4000;
         app.listen(PORT, () => {
             console.log(`

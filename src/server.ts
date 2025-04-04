@@ -2,7 +2,7 @@ import express from "express";
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@apollo/server/express4";
 import session from "express-session";
-import cors, { CorsOptions, CorsRequest } from "cors";
+import cors, { CorsOptions } from "cors";
 import dotenv from "dotenv";
 import schema from "./graphql/schema";
 import sequelize from "./config/database";
@@ -11,71 +11,46 @@ import pg from 'pg';
 const { Pool } = pg;
 import helmet from "helmet";
 import { User } from "./models";
-import { Request,Response } from "express";
+import { Request, Response } from "express";
 import { CustomRequest, CustomResponse, MyContext } from "./types/context";
 
 dotenv.config();
 
-
-
-type ApolloContext = {
-  req: Partial<Request> & { session: any };
-  res: Partial<Response>;
-  userId?: number;
-  user?: User | null;
-};
-
 const app = express();
-
-const corsOptions: CorsOptions = {
-  origin: (origin: string | undefined, callback: (error: any, allow?: boolean) => void) => {
-    // Allow specific origins or all origins
-    if (origin && origin === 'https://your-allowed-origin.com') {
-      callback(null, true); // Allow the origin
-    } else {
-      callback(new Error('Not allowed by CORS')); // Reject the origin
-    }
-  },
-  credentials: true, // Allow credentials (cookies, authorization headers)
-  optionsSuccessStatus: 200, // Handle preflight requests correctly
-};
 
 // =======================
 // 1. Security Middlewares
 // =======================
 app.use(helmet());
-app.set("trust proxy", 1); // Required for secure cookies in production
+app.set("trust proxy", 1);
 
 // =================
 // 2. CORS Setup
 // =================
 const allowedOrigins = [
+  "https://task-manager-frontend-eight-lilac.vercel.app",
   "https://task-manager-frontend-gkhoexaa1-leafywoods-projects.vercel.app",
-  "https://task-manager-frontend-eight-lilac.vercel.app"
+  "http://localhost:3000"
 ];
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
-      
-      if (allowedOrigins.indexOf(origin) !== -1 || 
-          allowedOrigins.some(allowed => origin.startsWith(allowed))) {
-        return callback(null, true);
-      }
-      
+const corsOptions: CorsOptions = {
+  origin: (origin: string | undefined, callback: (error: any, allow?: boolean) => void) => {
+    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+      callback(null, true);
+    } else {
       console.warn(`🚫 CORS blocked: ${origin}`);
-      return callback(new Error("Not allowed by CORS"), false);
-    },
-    credentials: true,
-    methods: ["GET", "POST", "OPTIONS", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-    exposedHeaders: ["set-cookie"],
-  })
-);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ["GET", "POST", "OPTIONS", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  exposedHeaders: ["set-cookie"],
+  optionsSuccessStatus: 200
+};
 
-app.options("*", cors()); // Handle preflight globally
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 // ======================
 // 3. Database Connection
@@ -83,7 +58,7 @@ app.options("*", cors()); // Handle preflight globally
 const pgPool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === "production" ? {
-    rejectUnauthorized: false // Required for Render/Heroku
+    rejectUnauthorized: false
   } : false
 });
 
@@ -92,21 +67,20 @@ const pgPool = new Pool({
 // =====================
 const PGStore = pgSession(session);
 
-// Update your session configuration
 app.use(
   session({
     name: "taskmanager.sid",
     secret: process.env.SESSION_SECRET!,
     resave: false,
-    saveUninitialized: false, // Changed to false for security
+    saveUninitialized: false,
     proxy: true,
     rolling: true,
     cookie: {
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 24 * 60 * 60 * 1000, // 1 day (reduced from 1 week)
-      domain: process.env.NODE_ENV === "production" ? ".yourdomain.com" : undefined // Set your domain
+      maxAge: 24 * 60 * 60 * 1000,
+      domain: process.env.NODE_ENV === "production" ? ".vercel.app" : undefined
     },
     store: new PGStore({
       pool: pgPool,
@@ -116,6 +90,7 @@ app.use(
     })
   })
 );
+
 // =====================
 // 5. Body Parsers
 // =====================
@@ -139,28 +114,19 @@ const server = new ApolloServer<MyContext>({
 // =====================
 const startServer = async () => {
   try {
-    // Database connection
     await sequelize.authenticate();
     console.log("✅ Database connected");
     
-    // Sync models
     await sequelize.sync({ alter: true });
     console.log("✅ Database synchronized");
 
-    // Start Apollo Server
     await server.start();
 
-    // GraphQL endpoint with session debugging
     app.use(
       "/graphql",
-      cors({
-        origin: allowedOrigins,
-        credentials: true
-      }),
       express.json(),
       expressMiddleware(server, {
         context: async ({ req, res }): Promise<MyContext> => {
-          // Type assertions here
           const customReq = req as unknown as CustomRequest;
           const customRes = res as unknown as CustomResponse;
           
@@ -184,7 +150,6 @@ const startServer = async () => {
       }) as any
     );
 
-    // Start server
     const PORT = process.env.PORT || 4000;
     app.listen(PORT, () => {
       console.log(`
