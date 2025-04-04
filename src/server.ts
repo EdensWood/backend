@@ -19,7 +19,7 @@ dotenv.config();
 const app = express();
 
 // =======================
-// 1. Security Middlewares/
+// 1. Security Middlewares
 // =======================
 app.use(helmet());
 app.set("trust proxy", 1);
@@ -29,7 +29,7 @@ app.set("trust proxy", 1);
 // =================
 const allowedOrigins = [
   "https://task-manager-frontend-eight-lilac.vercel.app",
-  "https://task-manager-frontend-72dxlq3nz-leafywoods-projects.vercel.app",
+  "https://task-manager-frontend-gkhoexaa1-leafywoods-projects.vercel.app",
   "http://localhost:3000"
 ];
 
@@ -76,28 +76,20 @@ app.use(
     proxy: true,
     rolling: true,
     cookie: {
-      secure: true, // Always true in production
+      secure: process.env.NODE_ENV === "production",
       httpOnly: true,
-      sameSite: 'none',
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 24 * 60 * 60 * 1000,
-      // Remove domain completely for Vercel
-      domain: undefined // Critical change!
+      domain: process.env.NODE_ENV === "production" ? ".vercel.app" : undefined
     },
     store: new PGStore({
       pool: pgPool,
       createTableIfMissing: true,
-      tableName: "user_sessions"
+      tableName: "user_sessions",
+      pruneSessionInterval: 60
     })
   })
 );
-
-// Add this right after app.use(session(...))
-app.use((req, res, next) => {
-  console.log('Session middleware - req.session:', req.session);
-  console.log('Session ID:', req.sessionID);
-  console.log('Cookies:', req.headers.cookie);
-  next();
-});
 
 // =====================
 // 5. Body Parsers
