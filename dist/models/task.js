@@ -49,6 +49,3 @@ Task.init({
     modelName: "Task",
     tableName: "tasks",
 });
-// Define association
-Task.belongsTo(user_1.User, { foreignKey: "userId", as: "user" });
-user_1.User.hasMany(Task, { foreignKey: "userId", as: "tasks" });
