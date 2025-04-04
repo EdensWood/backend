@@ -40,7 +40,7 @@ app.set("trust proxy", 1); // Required for secure cookies in production
 // 2. CORS Setup
 // =================
 const allowedOrigins = [
-    "https://task-manager-frontend-l8pxhkpki-leafywoods-projects.vercel.app",
+    "https://task-manager-frontend-8n6wg4cwg-leafywoods-projects.vercel.app",
     "https://task-manager-frontend-eight-lilac.vercel.app",
 ];
 app.use((0, cors_1.default)({
@@ -56,7 +56,7 @@ app.use((0, cors_1.default)({
     allowedHeaders: ['Content-Type',
         'Authorization',
         'X-Requested-With',
-        'credentials'],
+        'Accept'],
     exposedHeaders: ["set-cookie"],
 }));
 app.options('*', (0, cors_1.default)({
@@ -91,25 +91,32 @@ app.use((0, express_session_1.default)({
     proxy: true, // Required for proxies (Render, Vercel, etc.)
     rolling: true, // Renew cookie on every request
     cookie: {
-        secure: true,
+        secure: process.env.NODE_ENV === "production",
         httpOnly: true,
-        sameSite: "none", // Required for cross-site cookies
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Required for cross-site cookies
         domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined,
         maxAge: 7 * 24 * 60 * 60 * 1000, // 1 week
     }, // Adjust based on your domain},
     store: new PGStore({
         pool: pgPool,
         createTableIfMissing: true,
-        tableName: "user_sessions",
-        pruneSessionInterval: 60 // Cleanup expired sessions every 60 minutes
+        // Cleanup expired sessions every 60 minutes
     })
 }));
+// Add this to your server.ts routes
 app.get("/auth/check-session", (req, res) => {
     if (req.session.userId) {
-        res.status(200).json({ authenticated: true, userId: req.session.userId });
+        res.status(200).json({
+            authenticated: true,
+            userId: req.session.userId,
+            message: "Session is valid"
+        });
     }
     else {
-        res.status(401).json({ authenticated: false });
+        res.status(401).json({
+            authenticated: false,
+            message: "No valid session"
+        });
     }
 });
 // =====================

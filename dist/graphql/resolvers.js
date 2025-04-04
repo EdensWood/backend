@@ -113,59 +113,37 @@ const resolvers = {
                 }
             }
         },
+        // In your resolvers.ts
         login: async (_, { email, password }, { req }) => {
             try {
-                console.log(`Login attempt for email: ${email}`);
-                // 1. Find user
-                const user = await models_1.User.findOne({
-                    where: { email },
-                    attributes: ["id", "name", "email", "password"],
-                    raw: true // Must be false for sessions to work
-                });
-                if (!user) {
-                    console.error("User not found");
+                const user = await models_1.User.findOne({ where: { email } });
+                if (!user)
+                    throw new Error("User not found");
+                const validPassword = await bcryptjs_1.default.compare(password, user.password);
+                if (!validPassword)
                     throw new Error("Invalid credentials");
-                }
-                // Additional logging to debug
-                console.log(`Retrieved user: ${JSON.stringify(user)}`);
-                console.log(`Plain text password: ${password}`);
-                console.log(`Hashed password: ${user.password}`);
-                // 2. Compare passwords
-                const passwordMatch = await bcryptjs_1.default.compare(password, user.password);
-                if (!passwordMatch) {
-                    console.error("Password mismatch");
-                    throw new Error("Invalid credentials");
-                }
-                // 3. Create session (CRITICAL FIX)
+                // Set session
                 req.session.userId = user.id;
                 await new Promise((resolve, reject) => {
                     req.session.save(err => {
-                        if (err) {
-                            console.error("Session save error:", err);
+                        if (err)
                             reject(err);
-                        }
-                        else {
-                            console.log("Session saved successfully:", req.sessionID);
-                            console.log("Session after login:", req.session);
-                            resolve();
-                        }
+                        resolve();
                     });
                 });
-                // 4. Generate token (optional if using sessions)
-                const token = jsonwebtoken_1.default.sign({ userId: user.id }, process.env.JWT_SECRET || "fallback_secret", { expiresIn: "1h" });
                 return {
                     user: {
                         id: user.id.toString(),
                         name: user.name,
-                        email: user.email,
+                        email: user.email
                     },
-                    token,
-                    message: "Login successful",
+                    token: jsonwebtoken_1.default.sign({ userId: user.id }, process.env.JWT_SECRET || "fallback_secret", { expiresIn: "1h" }),
+                    message: "Login successful"
                 };
             }
             catch (error) {
                 console.error("Login error:", error);
-                throw new Error("Login failed. Please try again.");
+                throw new Error(error instanceof Error ? error.message : "Login failed");
             }
         },
         logout: async (_, __, { req, res }) => {

@@ -142,70 +142,43 @@ register: async (_: any, { name, email, password }: any) => {
   }
 },  
     
+// In your resolvers.ts
 login: async (_: any, { email, password }: any, { req }: ContextType) => {
   try {
-    console.log(`Login attempt for email: ${email}`);
+    const user = await User.findOne({ where: { email } });
+    if (!user) throw new Error("User not found");
 
-    // 1. Find user
-    const user = await User.findOne({
-      where: { email },
-      attributes: ["id", "name", "email", "password"],
-      raw: true // Must be false for sessions to work
-    });
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) throw new Error("Invalid credentials");
 
-    if (!user) {
-      console.error("User not found");
-      throw new Error("Invalid credentials");
-    }
-
-    // Additional logging to debug
-    console.log(`Retrieved user: ${JSON.stringify(user)}`);
-    console.log(`Plain text password: ${password}`);
-    console.log(`Hashed password: ${user.password}`);
-
-    // 2. Compare passwords
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) {
-      console.error("Password mismatch");
-      throw new Error("Invalid credentials");
-    }
-
-    // 3. Create session (CRITICAL FIX)
+    // Set session
     req.session.userId = user.id;
+    
     await new Promise<void>((resolve, reject) => {
       req.session.save(err => {
-        if (err) {
-          console.error("Session save error:", err);
-          reject(err);
-        } else {
-          console.log("Session saved successfully:", req.sessionID);
-            console.log("Session after login:", req.session);
-          resolve();
-        }
+        if (err) reject(err);
+        resolve();
       });
     });
-
-    // 4. Generate token (optional if using sessions)
-    const token = jwt.sign(
-      { userId: user.id },
-      process.env.JWT_SECRET || "fallback_secret",
-      { expiresIn: "1h" }
-    );
 
     return {
       user: {
         id: user.id.toString(),
         name: user.name,
-        email: user.email,
+        email: user.email
       },
-      token,
-      message: "Login successful",
+      token: jwt.sign(
+        { userId: user.id },
+        process.env.JWT_SECRET || "fallback_secret",
+        { expiresIn: "1h" }
+      ),
+      message: "Login successful"
     };
   } catch (error) {
     console.error("Login error:", error);
-    throw new Error("Login failed. Please try again.");
+    throw new Error(error instanceof Error ? error.message : "Login failed");
   }
-},   
+},  
     
 logout: async (_: any, __: any, { req, res }: any) => {
         // Clear session/cookie (implementation depends on your auth)
