@@ -19,7 +19,7 @@ dotenv.config();
 const app = express();
 
 // =======================
-// 1. Security Middlewares
+// 1. Security Middlewares/
 // =======================
 app.use(helmet());
 app.set("trust proxy", 1);

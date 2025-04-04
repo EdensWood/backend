@@ -19,7 +19,7 @@ const models_1 = require("./models");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 // =======================
-// 1. Security Middlewares
+// 1. Security Middlewares/
 // =======================
 app.use((0, helmet_1.default)());
 app.set("trust proxy", 1);
