@@ -220,20 +220,24 @@ const resolvers = {
             return updatedTask;
         },
         deleteTask: async (_, { id }, { req }) => {
-            console.log("Session User ID:", req.session.userId);
-            if (!req.session.userId)
-                throw new Error("Unauthorized");
+            const userId = req.session.userId;
+            console.log("Session User ID:", userId);
             console.log("Task ID received for deletion:", id);
-            const task = await models_1.Task.findByPk(Number(id)); // 🔥 Fix here
-            console.log("Fetched Task:", task);
-            if (!task)
-                throw new Error("Task not found");
-            if (task.userId !== req.session.userId)
-                throw new Error("Unauthorized access to task");
-            await models_1.Task.destroy({ where: { id: Number(id), userId: req.session.userId } });
+            if (!userId)
+                throw new Error("Unauthorized");
+            // Perform deletion only if the task belongs to the user
+            const deletedCount = await models_1.Task.destroy({
+                where: {
+                    id: Number(id),
+                    userId, // ensure ownership
+                },
+            });
+            if (deletedCount === 0) {
+                throw new Error("Task not found or unauthorized");
+            }
             console.log(`Task with ID ${id} deleted successfully.`);
             return "Task deleted successfully";
-        },
+        }
     },
 };
 exports.default = resolvers;
