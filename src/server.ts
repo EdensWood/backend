@@ -29,7 +29,7 @@ app.set("trust proxy", 1);
 // =================
 const allowedOrigins = [
   "https://task-manager-frontend-eight-lilac.vercel.app",
-  "https://task-manager-frontend-72dxlq3nz-leafywoods-projects.vercel.app",
+  "https://task-manager-frontend-kgvrmrkz8-leafywoods-projects.vercel.app",
   "http://localhost:3000"
 ];
 
@@ -49,7 +49,18 @@ const corsOptions: CorsOptions = {
   optionsSuccessStatus: 200
 };
 
-app.use(cors(corsOptions));
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.some(allowed => origin.startsWith(allowed))) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+  exposedHeaders: ['set-cookie']
+}));
+
 app.options("*", cors(corsOptions));
 
 // ======================
@@ -76,17 +87,17 @@ app.use(
     proxy: true,
     rolling: true,
     cookie: {
-      secure: process.env.NODE_ENV === "production",
+      secure: true, // Must be true for production
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      sameSite: 'none', // Critical for cross-site cookies
       maxAge: 24 * 60 * 60 * 1000,
-      domain: process.env.NODE_ENV === "production" ? ".vercel.app" : undefined
+      // REMOVE domain completely for Vercel deployments
+      domain: undefined
     },
     store: new PGStore({
       pool: pgPool,
       createTableIfMissing: true,
-      tableName: "user_sessions",
-      pruneSessionInterval: 60
+      tableName: "user_sessions"
     })
   })
 );
