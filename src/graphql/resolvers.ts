@@ -30,28 +30,41 @@ const resolvers = {
     
         const tasks = await Task.findAll({
           where: { userId: req.session.userId },
-          include: [{ model: User, as: "user" }],
-          raw: false
+          include: [
+            {
+              model: User,
+              as: "user", // ✅ Matches fixed association
+              attributes: ["id", "name"], // ✅ Fetch only necessary fields
+            },
+          ],
+          raw: false, // ✅ Ensure nested data is included
+          nest: true, // ✅ Ensure Sequelize nests results properly
         });
     
-        console.log("Fetched Tasks:", tasks);
-        
+        console.log("Fetched Tasks:", JSON.stringify(tasks, null, 2));
     
-        return tasks.map(task => ({
+        return tasks.map((task) => ({
           id: task.id.toString(),
           title: task.title ?? "No Title",
           description: task.description ?? "No Description",
           status: task.status ?? "UNKNOWN",
-          user: {
-            id: task.user?.id?.toString() ?? "UNKNOWN",
-            name: task.user?.name ?? "No Name"
-          }
+          user: task.user
+            ? {
+                id: task.user.id.toString(),
+                name: task.user.name,
+              }
+            : null, // ✅ Handle missing user gracefully
         }));
       } catch (error) {
-        console.error("Error fetching tasks:", error);
+        if (error instanceof Error) {
+          console.error("Error fetching tasks:", error.message, error.stack);
+        } else {
+          console.error("Error fetching tasks:", error);
+        }
         throw new Error("Failed to fetch tasks");
       }
     },
+    
     
     
     // In your me resolver
