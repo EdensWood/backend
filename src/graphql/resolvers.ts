@@ -30,31 +30,29 @@ const resolvers = {
     
         const tasks = await Task.findAll({
           where: { userId: req.session.userId },
-          // include: [
-          //   {
-          //     model: User,
-          //     as: "user", // ✅ Matches fixed association
-          //     attributes: ["id", "name"], // ✅ Fetch only necessary fields
-          //   },
-          // ],
+          include: [
+            {
+              model: User,
+              as: "user", // ✅ Matches fixed association
+            },
+          ],
           raw: false, // ✅ Ensure nested data is included
           nest: true, // ✅ Ensure Sequelize nests results properly
         });
     
         console.log("Fetched Tasks:", JSON.stringify(tasks, null, 2));
     
-        return tasks.map((task) => ({
-          id: task.id.toString(),
+        return tasks.map(task => ({
+          id: task.id?.toString() ?? "UNKNOWN",
           title: task.title ?? "No Title",
           description: task.description ?? "No Description",
           status: task.status ?? "UNKNOWN",
-          user: task.user
-            ? {
-                id: task.user.id.toString(),
-                name: task.user.name,
-              }
-            : null, // ✅ Handle missing user gracefully
+          user: task.user ? {
+            id: task.user.id?.toString() ?? "UNKNOWN",
+            name: task.user.name ?? "No Name"
+          } : null
         }));
+        
       } catch (error) {
         if (error instanceof Error) {
           console.error("Error fetching tasks:", error.message, error.stack);
