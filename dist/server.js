@@ -29,7 +29,7 @@ app.set("trust proxy", 1);
 // =================
 const allowedOrigins = [
     "https://task-manager-frontend-eight-lilac.vercel.app",
-    "https://task-manager-frontend-dfvcm0173-leafywoods-projects.vercel.app",
+    "https://task-manager-frontend-iqll1gwpp-leafywoods-projects.vercel.app",
     "http://localhost:3000"
 ];
 const corsOptions = {
