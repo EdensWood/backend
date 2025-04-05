@@ -93,7 +93,6 @@ app.use(
       sameSite: 'none', // Critical for cross-site cookies
       maxAge: 24 * 60 * 60 * 1000,
       // REMOVE domain completely for Vercel deployments
-      domain: "task-manager-frontend-eight-lilac.vercel.app"
     },
     store: new PGStore({
       pool: pgPool,
