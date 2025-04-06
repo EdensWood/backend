@@ -82,9 +82,9 @@ app.use((0, express_session_1.default)({
     proxy: true,
     rolling: true,
     cookie: {
-        secure: true, // Must be true for production
+        secure: false, // Must be true for production
         httpOnly: true,
-        sameSite: 'none', // Critical for cross-site cookies
+        sameSite: 'lax', // Critical for cross-site cookies
         maxAge: 24 * 60 * 60 * 1000,
         // REMOVE domain completely for Vercel deployments
     },
