@@ -8,38 +8,32 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const models_1 = require("../models");
 const resolvers = {
     Query: {
-        /**
-         * Fetch all users (requires authentication)
-         * @param _ - Unused
-         * @param __ - Unused
-         * @param context - GraphQL context with request object
-         * @returns List of users
-         */
         users: async (_, __, { req }) => {
             if (!req.session.userId)
                 throw new Error("Unauthorized");
             return await models_1.User.findAll();
         },
-        /**
-         * Fetch all tasks with associated user
-         * @returns List of all tasks
-         */
         tasks: async () => await models_1.Task.findAll({ include: [{ model: models_1.User, as: "user" }] }),
-        /**
-         * Fetch tasks created by the currently logged-in user
-         * @param _ - Unused
-         * @param __ - Unused
-         * @param context - GraphQL context with session
-         * @returns List of user’s tasks
-         */
+        // In your resolvers.ts
         myTasks: async (_, __, { req }) => {
             try {
-                if (!req.session.userId)
+                console.log("Session data in myTasks resolver:", req.session);
+                if (!req.session.userId) {
+                    console.error("Unauthorized GraphQL access attempt");
                     throw new Error("Unauthorized");
+                }
+                console.log("Fetching tasks for user:", req.session.userId);
                 const tasks = await models_1.Task.findAll({
                     where: { userId: req.session.userId },
-                    include: [{ model: models_1.User, as: "user" }],
+                    include: [
+                        {
+                            model: models_1.User,
+                            as: "user", // ✅ Matches fixed association
+                        },
+                    ],
+                    // ✅ Ensure Sequelize nests results properly
                 });
+                console.log("Fetched Tasks:", JSON.stringify(tasks, null, 2));
                 return tasks.map(task => ({
                     id: task.dataValues.id?.toString() ?? "UNKNOWN",
                     title: task.dataValues.title ?? "No Title",
@@ -52,16 +46,19 @@ const resolvers = {
                 }));
             }
             catch (error) {
-                console.error("Error fetching tasks:", error);
+                if (error instanceof Error) {
+                    console.error("Error fetching tasks:", error.message, error.stack);
+                }
+                else {
+                    console.error("Error fetching tasks:", error);
+                }
                 throw new Error("Failed to fetch tasks");
             }
         },
-        /**
-         * Get the currently authenticated user's profile info
-         * @returns The logged-in user's info or null
-         */
+        // In your me resolver
         me: async (_, __, { req }) => {
             if (req.session.userId) {
+                // Session-based auth
                 return await models_1.User.findByPk(req.session.userId, { attributes: ["id", "name", "email"] });
             }
             const authHeader = req.headers.authorization || '';
@@ -79,23 +76,25 @@ const resolvers = {
         }
     },
     Mutation: {
-        /**
-         * Register a new user
-         * @param _ - Unused
-         * @param args - Object with name, email, and password
-         * @returns AuthPayload with token and user info
-         */
+        // resolvers.ts - Revised Register Resolver
         register: async (_, { name, email, password }) => {
             try {
                 const existingUser = await models_1.User.findOne({ where: { email } });
                 if (existingUser)
                     throw new Error("Email already exists");
+                console.log('Original password:', password);
                 const hashedPassword = await bcryptjs_1.default.hash(password, 10);
-                const newUser = await models_1.User.create({ name, email, password: hashedPassword });
+                console.log('Hashed password:', hashedPassword);
+                const newUser = await models_1.User.create({
+                    name,
+                    email,
+                    password: hashedPassword // Ensure this is the hashed version
+                });
+                // Convert to plain object and handle ID conversion
                 const userData = newUser.get({ plain: true });
                 return {
                     user: {
-                        id: userData.id,
+                        id: userData.id, // Convert to string for GraphQL ID
                         name: userData.name,
                         email: userData.email
                     },
@@ -105,37 +104,62 @@ const resolvers = {
             }
             catch (error) {
                 console.error("Registration error:", error);
-                throw new Error(`Registration failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                if (error instanceof Error) {
+                    throw new Error(`Registration failed: ${error.message}`);
+                }
+                else {
+                    throw new Error("Registration failed due to an unknown error");
+                }
             }
         },
-        /**
-         * Log in a user and start a session
-         * @param _ - Unused
-         * @param args - Object with email and password
-         * @param context - Contains session
-         * @returns AuthPayload with token and user info
-         */
         login: async (_, { email, password }, { req }) => {
             try {
+                console.log(`Login attempt for email: ${email}`);
+                // 1. Find user
                 const user = await models_1.User.findOne({
                     where: { email },
                     attributes: ["id", "name", "email", "password"],
-                    raw: true
+                    raw: true // Must be false for sessions to work
                 });
-                if (!user)
+                if (!user) {
+                    console.error("User not found");
                     throw new Error("Invalid credentials");
+                }
+                // Additional logging to debug
+                console.log(`Retrieved user: ${JSON.stringify(user)}`);
+                console.log(`Plain text password: ${password}`);
+                console.log(`Hashed password: ${user.password}`);
+                // 2. Compare passwords
                 const passwordMatch = await bcryptjs_1.default.compare(password, user.password);
-                if (!passwordMatch)
+                if (!passwordMatch) {
+                    console.error("Password mismatch");
                     throw new Error("Invalid credentials");
+                }
+                // 3. Create session (CRITICAL FIX)
                 req.session.userId = user.id;
                 await new Promise((resolve, reject) => {
-                    req.session.save((err) => (err ? reject(err) : resolve()));
+                    req.session.save((err) => {
+                        if (err) {
+                            console.error("Session save error:", err);
+                            reject(err);
+                        }
+                        else {
+                            console.log("Session saved successfully:", req.sessionID);
+                            console.log("Session after login:", req.session);
+                            resolve();
+                        }
+                    });
                 });
+                // 4. Generate token (optional if using sessions)
                 const token = jsonwebtoken_1.default.sign({ userId: user.id }, process.env.JWT_SECRET || "fallback_secret", { expiresIn: "1h" });
                 return {
-                    user: { id: user.id.toString(), name: user.name, email: user.email },
+                    user: {
+                        id: user.id.toString(),
+                        name: user.name,
+                        email: user.email,
+                    },
                     token,
-                    message: "Login successful"
+                    message: "Login successful",
                 };
             }
             catch (error) {
@@ -143,13 +167,9 @@ const resolvers = {
                 throw new Error("Login failed. Please try again.");
             }
         },
-        /**
-         * Logs the user out by destroying the session and clearing the cookie
-         * @returns True if logout was successful
-         */
         logout: async (_, __, { req, res }) => {
             return new Promise((resolve, reject) => {
-                req.session.destroy(err => {
+                req.session.destroy((err) => {
                     if (err) {
                         console.error("Logout error:", err);
                         reject(new Error("Logout failed"));
@@ -161,25 +181,22 @@ const resolvers = {
                 });
             });
         },
-        /**
-         * Creates a new task for the authenticated user
-         * @param _ - Unused
-         * @param args - Task input: title, description, status
-         * @returns The created task
-         */
         createTask: async (_, { title, description, status }, { req }) => {
             if (!req.session.userId)
                 throw new Error("Unauthorized");
             try {
+                // Create the task
                 const newTask = await models_1.Task.create({
                     title,
                     description,
                     status,
                     userId: req.session.userId
                 });
+                // Convert to plain object and ensure ID is included
                 const taskData = newTask.get({ plain: true });
+                // Return in correct format
                 return {
-                    id: taskData.id.toString(),
+                    id: taskData.id.toString(), // Convert to string if using GraphQL ID type
                     title: taskData.title,
                     description: taskData.description,
                     status: taskData.status,
@@ -191,39 +208,40 @@ const resolvers = {
                 throw new Error("Failed to create task");
             }
         },
-        /**
-         * Updates an existing task belonging to the authenticated user
-         * @param _ - Unused
-         * @param args - Task input: id and fields to update
-         * @returns Updated task
-         */
         updateTask: async (_, { id, title, description, status }, { req }) => {
+            console.log("Session User ID:", req.session.userId);
             if (!req.session.userId)
                 throw new Error("Unauthorized");
+            console.log("Task ID received:", id);
             const task = await models_1.Task.findByPk(Number(id), { raw: true });
+            console.log("Fetched Task:", task);
             if (!task)
                 throw new Error("Task not found");
             if (task.userId !== req.session.userId)
                 throw new Error("Unauthorized access to task");
             await models_1.Task.update({ title, description, status }, { where: { id } });
-            return await models_1.Task.findByPk(Number(id), { raw: true });
+            const updatedTask = await models_1.Task.findByPk(Number(id), { raw: true });
+            return updatedTask;
         },
-        /**
-         * Deletes a task belonging to the authenticated user
-         * @param _ - Unused
-         * @param args - Task ID to delete
-         * @returns Success message
-         */
         deleteTask: async (_, { id }, { req }) => {
-            if (!req.session.userId)
+            const userId = req.session.userId;
+            console.log("Session User ID:", userId);
+            console.log("Task ID received for deletion:", id);
+            if (!userId)
                 throw new Error("Unauthorized");
+            // Perform deletion only if the task belongs to the user
             const deletedCount = await models_1.Task.destroy({
-                where: { id: Number(id), userId: req.session.userId }
+                where: {
+                    id: Number(id),
+                    userId, // ensure ownership
+                },
             });
-            if (deletedCount === 0)
+            if (deletedCount === 0) {
                 throw new Error("Task not found or unauthorized");
+            }
+            console.log(`Task with ID ${id} deleted successfully.`);
             return "Task deleted successfully";
         }
-    }
+    },
 };
 exports.default = resolvers;
