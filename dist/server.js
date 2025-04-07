@@ -28,7 +28,7 @@ app.set("trust proxy", 1);
 // 2. CORS Setup
 // =================
 const allowedOrigins = [
-    "https://task-manager-frontend-eight-lilac.vercel.app",
+    "https://leafywoodz.com",
     "https://task-manager-frontend-otctppq6d-leafywoods-projects.vercel.app",
     "http://localhost:3000"
 ];
