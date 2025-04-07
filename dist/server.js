@@ -24,11 +24,55 @@ const app = (0, express_1.default)();
 // =======================
 app.use((0, helmet_1.default)());
 app.set("trust proxy", 1);
+// =====================
+// 2. Body Parsers Early
+// =====================
+app.use(express_1.default.json({ limit: "10mb" }));
+app.use(express_1.default.urlencoded({ extended: true }));
+// ======================
+// 3. Database Connection
+// ======================
+const pgPool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === "production" ? {
+        rejectUnauthorized: false
+    } : false
+});
+// =====================
+// 4. Session Setup (before cors)
+// =====================
+const PGStore = (0, connect_pg_simple_1.default)(express_session_1.default);
+app.use((0, express_session_1.default)({
+    name: "taskmanager.sid",
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    proxy: true,
+    rolling: true,
+    cookie: {
+        secure: true,
+        httpOnly: true,
+        sameSite: 'none',
+        maxAge: 24 * 60 * 60 * 1000
+    },
+    store: new PGStore({
+        pool: pgPool,
+        createTableIfMissing: true,
+        tableName: "user_sessions"
+    })
+}));
+// Debugging logs for session
+app.use((req, res, next) => {
+    console.log('Session middleware - req.session:', req.session);
+    console.log('Session ID:', req.sessionID);
+    console.log('Cookies:', req.headers.cookie);
+    next();
+});
 // =================
-// 2. CORS Setup
+// 5. CORS Setup (after session)
 // =================
 const allowedOrigins = [
-    "https://www.leafywoodz.com", // ✅ Add this line
+    "https://www.leafywoodz.com",
     "http://localhost:3000"
 ];
 const corsOptions = {
@@ -49,54 +93,6 @@ const corsOptions = {
 };
 app.use((0, cors_1.default)(corsOptions));
 app.options("*", (0, cors_1.default)(corsOptions));
-// ======================
-// 3. Database Connection
-// ======================
-const pgPool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === "production" ? {
-        rejectUnauthorized: false
-    } : false
-});
-// =====================
-// 4. Session Setup
-// =====================
-const PGStore = (0, connect_pg_simple_1.default)(express_session_1.default);
-app.use((0, express_session_1.default)({
-    name: "taskmanager.sid",
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    proxy: true,
-    rolling: true,
-    cookie: {
-        secure: true, // Must be true for production
-        httpOnly: true,
-        sameSite: 'none', // Critical for cross-site cookies
-        maxAge: 24 * 60 * 60 * 1000,
-        // REMOVE domain completely for Vercel deployments
-    },
-    store: new PGStore({
-        pool: pgPool,
-        createTableIfMissing: true,
-        tableName: "user_sessions"
-    })
-}));
-app.use((req, res, next) => {
-    console.log('Session middleware - req.session:', req.session);
-    console.log('Session ID:', req.sessionID);
-    console.log('Cookies:', req.headers.cookie);
-    next();
-});
-// =====================
-// 5. Body Parsers
-// =====================
-app.use(express_1.default.json({ limit: "10mb" }));
-app.use(express_1.default.urlencoded({ extended: true }));
-app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Credentials', 'true');
-    next();
-});
 // =====================
 // 6. Apollo Server Setup
 // =====================
@@ -104,7 +100,7 @@ const server = new server_1.ApolloServer({
     schema: schema_1.default,
 });
 // =====================
-// 7. Server Startup
+// 7. Start Server
 // =====================
 const startServer = async () => {
     (0, associations_1.setupAssociations)();
@@ -114,7 +110,7 @@ const startServer = async () => {
         await database_1.default.sync({ alter: true });
         console.log("✅ Database synchronized");
         await server.start();
-        app.use("/graphql", express_1.default.json(), (0, express4_1.expressMiddleware)(server, {
+        app.use("/graphql", (0, express4_1.expressMiddleware)(server, {
             context: async ({ req, res }) => {
                 const customReq = req;
                 const customRes = res;
@@ -135,6 +131,15 @@ const startServer = async () => {
                 };
             }
         }));
+        // Debug route to test mobile session/cookie
+        app.get('/check-session', (req, res) => {
+            console.log("🔍 /check-session hit:", req.session);
+            res.json({
+                session: req.session,
+                sessionID: req.sessionID,
+                cookies: req.headers.cookie
+            });
+        });
         const PORT = process.env.PORT || 4000;
         app.listen(PORT, () => {
             console.log(`
