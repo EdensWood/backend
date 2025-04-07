@@ -15,44 +15,75 @@ const resolvers = {
         },
         tasks: async () => await models_1.Task.findAll({ include: [{ model: models_1.User, as: "user" }] }),
         // In your resolvers.ts
-        myTasks: async (_, __, { req }) => {
+        myTasks: async (_, __, { req, res }) => {
             try {
-                console.log("Session data in myTasks resolver:", req.session);
+                // Enhanced session logging for mobile debugging
+                console.log("Mobile Session Check - ID:", req.sessionID, "User:", req.session.userId, "User Agent:", req.headers?.['user-agent']);
+                // Mobile-specific session validation
                 if (!req.session.userId) {
-                    console.error("Unauthorized GraphQL access attempt");
+                    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(req.headers?.['user-agent'] || '');
+                    console.error(`Unauthorized access - Mobile: ${isMobile}`, {
+                        session: req.session,
+                        headers: req.headers
+                    });
+                    // For mobile, consider adding additional debug headers
+                    if (isMobile && res) {
+                        res.setHeader('X-Session-Debug', JSON.stringify({
+                            sessionId: req.sessionID,
+                            userId: req.session.userId
+                        }));
+                    }
                     throw new Error("Unauthorized");
                 }
-                console.log("Fetching tasks for user:", req.session.userId);
+                // Mobile-optimized query
                 const tasks = await models_1.Task.findAll({
                     where: { userId: req.session.userId },
-                    include: [
-                        {
+                    include: [{
                             model: models_1.User,
-                            as: "user", // ✅ Matches fixed association
-                        },
-                    ],
-                    // ✅ Ensure Sequelize nests results properly
+                            as: "user",
+                            attributes: ['id', 'name'] // Only fetch needed fields
+                        }],
+                    raw: false, // Ensure we get full instances
+                    nest: true, // Better for mobile JSON serialization
+                    logging: console.log // Log the actual SQL query
                 });
-                console.log("Fetched Tasks:", JSON.stringify(tasks, null, 2));
-                return tasks.map(task => ({
-                    id: task.dataValues.id?.toString() ?? "UNKNOWN",
-                    title: task.dataValues.title ?? "No Title",
-                    description: task.dataValues.description ?? "No Description",
-                    status: task.dataValues.status ?? "UNKNOWN",
-                    user: task.user ? {
-                        id: task.user.id?.toString() ?? "UNKNOWN",
-                        name: task.user.name ?? "No Name"
-                    } : null
-                }));
+                // Mobile-friendly response formatting
+                const mobileFormattedTasks = tasks.map(task => {
+                    // Null checks for mobile stability
+                    const taskData = task.get ? task.get({ plain: true }) : task;
+                    return {
+                        id: String(taskData.id ?? 'unknown-id'),
+                        title: taskData.title ?? 'Untitled Task',
+                        description: taskData.description ?? '',
+                        status: taskData.status ?? 'pending',
+                        user: taskData.user ? {
+                            id: String(taskData.user.id),
+                            name: taskData.user.name ?? 'Anonymous'
+                        } : null,
+                        // Mobile-specific optimizations
+                        ...(process.env.NODE_ENV === 'production' ? {} : {
+                            _debug: {
+                                sessionUserId: req.session.userId,
+                                queriedAt: new Date().toISOString()
+                            }
+                        })
+                    };
+                });
+                console.log(`Tasks fetched successfully - Count: ${mobileFormattedTasks.length}`);
+                return mobileFormattedTasks;
             }
             catch (error) {
-                if (error instanceof Error) {
-                    console.error("Error fetching tasks:", error.message, error.stack);
-                }
-                else {
-                    console.error("Error fetching tasks:", error);
-                }
-                throw new Error("Failed to fetch tasks");
+                // Enhanced mobile error handling
+                const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(req.headers?.['user-agent'] || '');
+                const errorMessage = isMobile
+                    ? "Couldn't load tasks. Please check your connection."
+                    : "Failed to fetch tasks";
+                console.error(`TASK_FETCH_ERROR [Mobile:${isMobile}]`, {
+                    error: error instanceof Error ? error.stack : error,
+                    session: req.session,
+                    headers: req.headers
+                });
+                throw new Error(errorMessage);
             }
         },
         // In your me resolver
