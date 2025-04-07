@@ -28,15 +28,12 @@ app.set("trust proxy", 1);
 // 2. CORS Setup
 // =================
 const allowedOrigins = [
-    "https://leafywoodz.com",
     "https://www.leafywoodz.com", // ✅ Add this line
-    "https://task-manager-frontend-eight-lilac.vercel.app",
-    "https://task-manager-frontend-otctppq6d-leafywoods-projects.vercel.app",
     "http://localhost:3000"
 ];
 const corsOptions = {
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app') || origin.endsWith('.leafywoodz.com')) {
+        if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.leafywoodz.com')) {
             callback(null, true);
         }
         else {
