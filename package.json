@@ -10,6 +10,7 @@
     "postinstall": "npm install --save-dev @types/jsonwebtoken @types/connect-pg-simple @types/pg"
   },
   "dependencies": {
+    "@apollo/client": "^3.13.6",
     "@apollo/server": "^4.11.3",
     "@types/cookie-parser": "^1.4.8",
     "@types/express": "^5.0.1",
@@ -30,6 +31,7 @@
     "pg": "^8.14.1",
     "pg-hstore": "^2.3.4",
     "sequelize": "^6.37.7",
+    "sequelize-typescript": "^2.1.6",
     "supertest": "^7.1.0",
     "typeorm": "^0.3.21",
     "typescript": "^5.8.2"
@@ -43,6 +45,7 @@
     "@types/jest": "^29.5.14",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/pg": "^8.11.11",
+    "@types/sequelize": "^4.28.20",
     "jest": "^29.7.0",
     "ts-jest": "^29.3.1",
     "ts-node": "^10.9.2",

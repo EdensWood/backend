@@ -1,18 +1,39 @@
-import { DataTypes, Model, Optional } from "sequelize";
+/**
+ * Sequelize model definition for Task
+ * Represents tasks created and managed by users in the Task Management App
+ */
+
+import { DataTypes, Model } from "sequelize";
 import sequelize from "../config/database";
 import { User } from "./user"; // ✅ Ensure proper import
 
+/**
+ * Task model class
+ * Extends Sequelize's Model to represent a task entity
+ */
 class Task extends Model {
-  
+  /** Unique identifier for the task */
   id!: number;
+
+  /** Title of the task */
   title!: string;
+
+  /** Optional description providing more details about the task */
   description!: string;
+
+  /** Current status of the task: PENDING, IN_PROGRESS, or COMPLETED */
   status!: "PENDING" | "IN_PROGRESS" | "COMPLETED";
+
+  /** Foreign key referencing the user who owns this task */
   userId!: number;
 
-  user?: User; // Optional association with User model
+  /** Optional user object associated with the task */
+  user?: User;
 }
 
+/**
+ * Initializes the Task model with fields and their constraints
+ */
 Task.init(
   {
     id: {
@@ -42,12 +63,11 @@ Task.init(
         key: "id",
       },
     },
-    
   },
   {
     sequelize,
     modelName: "Task",
-    tableName: "tasks",
+    tableName: "tasks", // ✅ Explicit table name for clarity
   }
 );
 

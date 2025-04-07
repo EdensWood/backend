@@ -1,18 +1,36 @@
-import { DataTypes, Model, Optional } from "sequelize";
+/**
+ * Sequelize model definition for User
+ * Represents users registered in the Task Management App
+ */
+
+import { DataTypes, Model } from "sequelize";
 import sequelize from "../config/database";
 
-
+/**
+ * User model class
+ * Extends Sequelize's Model to represent a user entity
+ */
 class User extends Model {
+  /** Unique identifier for the user */
   id!: number;
+
+  /** Full name of the user */
   name!: string;
+
+  /** Email address of the user */
   email!: string;
+
+  /** Hashed password for authentication */
   password!: string;
 }
 
+/**
+ * Initializes the User model with fields and constraints
+ */
 User.init(
   {
     id: {
-      type: DataTypes.INTEGER, 
+      type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
       allowNull: false,
@@ -37,8 +55,8 @@ User.init(
   {
     sequelize,
     modelName: "User",
-    tableName: "users",  // ✅ Explicitly define table name
-    timestamps: true,  // ✅ Adds createdAt & updatedAt fields
+    tableName: "users",   // ✅ Explicitly define table name
+    timestamps: true,     // ✅ Automatically adds createdAt & updatedAt
   }
 );
 

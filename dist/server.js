@@ -1,4 +1,8 @@
 "use strict";
+/**
+ * Main server setup for the Task Management App
+ * Includes Express app setup, Apollo GraphQL server, CORS, session handling, and database initialization.
+ */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -19,28 +23,28 @@ const models_1 = require("./models");
 const associations_1 = require("./models/associations");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
-// =======================
-// 1. Security Middlewares
-// =======================
+/**
+ * 1. Apply HTTP security headers using helmet.
+ */
 app.use((0, helmet_1.default)());
 app.set("trust proxy", 1);
-// =====================
-// 2. Body Parsers Early
-// =====================
+/**
+ * 2. Enable body parsing for JSON and URL-encoded payloads.
+ */
 app.use(express_1.default.json({ limit: "10mb" }));
 app.use(express_1.default.urlencoded({ extended: true }));
-// ======================
-// 3. Database Connection
-// ======================
+/**
+ * 3. Setup PostgreSQL connection pool for session store and ORM.
+ */
 const pgPool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === "production" ? {
         rejectUnauthorized: false
     } : false
 });
-// =====================
-// 4. Session Setup (before cors)
-// =====================
+/**
+ * 4. Configure session middleware using connect-pg-simple for PostgreSQL-backed sessions.
+ */
 const PGStore = (0, connect_pg_simple_1.default)(express_session_1.default);
 app.use((0, express_session_1.default)({
     name: "taskmanager.sid",
@@ -53,7 +57,7 @@ app.use((0, express_session_1.default)({
         secure: true,
         httpOnly: true,
         sameSite: 'none',
-        maxAge: 24 * 60 * 60 * 1000
+        maxAge: 24 * 60 * 60 * 1000 // 1 day
     },
     store: new PGStore({
         pool: pgPool,
@@ -61,16 +65,18 @@ app.use((0, express_session_1.default)({
         tableName: "user_sessions"
     })
 }));
-// Debugging logs for session
+/**
+ * Debug middleware to log session and cookie data.
+ */
 app.use((req, res, next) => {
     console.log('Session middleware - req.session:', req.session);
     console.log('Session ID:', req.sessionID);
     console.log('Cookies:', req.headers.cookie);
     next();
 });
-// =================
-// 5. CORS Setup (after session)
-// =================
+/**
+ * 5. Configure CORS to allow frontend domains and support credentials.
+ */
 const allowedOrigins = [
     "https://www.leafywoodz.com",
     "http://localhost:3000"
@@ -93,15 +99,19 @@ const corsOptions = {
 };
 app.use((0, cors_1.default)(corsOptions));
 app.options("*", (0, cors_1.default)(corsOptions));
-// =====================
-// 6. Apollo Server Setup
-// =====================
+/**
+ * 6. Initialize Apollo Server with the provided GraphQL schema.
+ */
 const server = new server_1.ApolloServer({
     schema: schema_1.default,
 });
-// =====================
-// 7. Start Server
-// =====================
+/**
+ * 7. Starts the server:
+ *    - Authenticates and syncs database
+ *    - Starts Apollo Server
+ *    - Sets up GraphQL route with session context
+ *    - Starts Express server
+ */
 const startServer = async () => {
     (0, associations_1.setupAssociations)();
     try {
@@ -111,6 +121,10 @@ const startServer = async () => {
         console.log("✅ Database synchronized");
         await server.start();
         app.use("/graphql", (0, express4_1.expressMiddleware)(server, {
+            /**
+             * Custom context middleware to inject user session info
+             * into Apollo resolvers
+             */
             context: async ({ req, res }) => {
                 const customReq = req;
                 const customRes = res;
@@ -131,7 +145,9 @@ const startServer = async () => {
                 };
             }
         }));
-        // Debug route to test mobile session/cookie
+        /**
+         * Diagnostic route for testing session from mobile or web.
+         */
         app.get('/check-session', (req, res) => {
             console.log("🔍 /check-session hit:", req.session);
             res.json({
@@ -155,9 +171,9 @@ const startServer = async () => {
     }
 };
 startServer();
-// =====================
-// 8. Error Handling
-// =====================
+/**
+ * 8. Global error handlers for uncaught exceptions and unhandled promise rejections.
+ */
 process.on("unhandledRejection", (err) => {
     console.error("Unhandled rejection:", err);
 });
