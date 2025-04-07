@@ -29,37 +29,26 @@ app.set("trust proxy", 1);
 // =================
 const allowedOrigins = [
     "https://task-manager-frontend-eight-lilac.vercel.app",
-    "https://task-manager-frontend-iqll1gwpp-leafywoods-projects.vercel.app",
+    "https://task-manager-frontend-otctppq6d-leafywoods-projects.vercel.app",
     "http://localhost:3000"
 ];
 const corsOptions = {
-    origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
-            callback(null, true);
-        }
-        else {
-            console.warn(`🚫 CORS blocked: ${origin}`);
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    credentials: true,
-    methods: ["GET", "POST", "OPTIONS", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-    exposedHeaders: ["set-cookie"],
-    optionsSuccessStatus: 200
-};
-app.use((0, cors_1.default)({
     origin: (origin, callback) => {
         if (!origin || allowedOrigins.some(allowed => origin.startsWith(allowed))) {
             callback(null, true);
         }
         else {
+            console.warn(`🚫 CORS blocked: ${origin}`);
             callback(new Error("Not allowed by CORS"));
         }
     },
     credentials: true,
-    exposedHeaders: ['set-cookie']
-}));
+    methods: ["GET", "POST", "OPTIONS", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    exposedHeaders: ["set-cookie"],
+    optionsSuccessStatus: 200
+};
+app.use((0, cors_1.default)(corsOptions));
 app.options("*", (0, cors_1.default)(corsOptions));
 // ======================
 // 3. Database Connection
